@@ -3,6 +3,7 @@
 import { FaChild, FaHeartbeat, FaCalendarAlt, FaArrowRight } from 'react-icons/fa'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
+import GrowthChart from '@/components/features/GrowthChart'
 
 export default function ParentDashboard() {
     const children = [
@@ -83,61 +84,44 @@ export default function ParentDashboard() {
                 </div>
             </Card>
 
-            {/* GROWTH CHART */}
+            {/* GROWTH CHART - RECHARTS VERSION */}
             <Card>
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-lg font-semibold">Grafik Perkembangan</h2>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <FaCalendarAlt />
-                        <span>6 Bulan</span>
-                    </div>
-                </div>
-
-                {/* SIMPLE CHART PLACEHOLDER */}
-                <div className="h-48 flex items-end justify-between gap-2 mb-4">
-                    {growthData.map((data, i) => (
-                        <div key={i} className="flex-1 flex flex-col items-center">
-                            <div className="w-full space-y-1">
-                                <div
-                                    className="bg-pink-400 rounded-t w-full"
-                                    style={{ height: `${data.weight * 6}px` }}
-                                    title={`Berat: ${data.weight}kg`}
-                                ></div>
-                                <div
-                                    className="bg-blue-400 rounded-t w-full"
-                                    style={{ height: `${data.height - 70}px` }}
-                                    title={`Tinggi: ${data.height}cm`}
-                                ></div>
-                            </div>
-                            <span className="text-xs text-gray-600 mt-2">{data.month}</span>
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-pink-500 rounded-full"></div>
+                            <span className="text-xs text-gray-600">Berat (kg)</span>
                         </div>
-                    ))}
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                            <span className="text-xs text-gray-600">Tinggi (cm)</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="flex justify-center gap-6 pt-4 border-t">
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-pink-400 rounded"></div>
-                        <span className="text-sm text-gray-700">Berat Badan</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-blue-400 rounded"></div>
-                        <span className="text-sm text-gray-700">Tinggi Badan</span>
-                    </div>
+                <GrowthChart data={growthData} type="area" height={250} />
+
+                <div className="flex justify-end mt-4">
+                    <button className="text-pink-500 text-sm font-medium flex items-center gap-1 hover:text-pink-600">
+                        Lihat Detail Grafik
+                        <FaArrowRight size={12} />
+                    </button>
                 </div>
             </Card>
 
             {/* QUICK ACTIONS */}
             <div className="grid grid-cols-3 gap-4">
-                <button className="bg-pink-50 p-4 rounded-xl text-center hover:bg-pink-100 transition">
-                    <div className="text-pink-500 text-2xl mb-2">📝</div>
+                <button className="bg-pink-50 p-4 rounded-xl text-center hover:bg-pink-100 transition group">
+                    <div className="text-pink-500 text-2xl mb-2 group-hover:scale-110 transition">📝</div>
                     <span className="text-sm font-medium text-gray-700">Input Data</span>
                 </button>
-                <button className="bg-blue-50 p-4 rounded-xl text-center hover:bg-blue-100 transition">
-                    <div className="text-blue-500 text-2xl mb-2">📊</div>
+                <button className="bg-blue-50 p-4 rounded-xl text-center hover:bg-blue-100 transition group">
+                    <div className="text-blue-500 text-2xl mb-2 group-hover:scale-110 transition">📊</div>
                     <span className="text-sm font-medium text-gray-700">Lihat Grafik</span>
                 </button>
-                <button className="bg-purple-50 p-4 rounded-xl text-center hover:bg-purple-100 transition">
-                    <div className="text-purple-500 text-2xl mb-2">📅</div>
+                <button className="bg-purple-50 p-4 rounded-xl text-center hover:bg-purple-100 transition group">
+                    <div className="text-purple-500 text-2xl mb-2 group-hover:scale-110 transition">📅</div>
                     <span className="text-sm font-medium text-gray-700">Imunisasi</span>
                 </button>
             </div>
