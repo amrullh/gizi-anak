@@ -28,8 +28,8 @@ export default function InputPage() {
                 <button
                     onClick={() => setActiveTab('addChild')}
                     className={`flex-1 py-3 rounded-xl text-sm font-medium transition ${activeTab === 'addChild'
-                            ? 'bg-pink-500 text-white shadow-md'
-                            : 'text-gray-600 hover:bg-gray-100'
+                        ? 'bg-pink-500 text-white shadow-md'
+                        : 'text-gray-600 hover:bg-gray-100'
                         }`}
                 >
                     <FaChild className="inline mr-2" />
@@ -38,8 +38,8 @@ export default function InputPage() {
                 <button
                     onClick={() => setActiveTab('inputData')}
                     className={`flex-1 py-3 rounded-xl text-sm font-medium transition ${activeTab === 'inputData'
-                            ? 'bg-pink-500 text-white shadow-md'
-                            : 'text-gray-600 hover:bg-gray-100'
+                        ? 'bg-pink-500 text-white shadow-md'
+                        : 'text-gray-600 hover:bg-gray-100'
                         }`}
                 >
                     <FaPlus className="inline mr-2" />
@@ -48,8 +48,8 @@ export default function InputPage() {
                 <button
                     onClick={() => setActiveTab('updateData')}
                     className={`flex-1 py-3 rounded-xl text-sm font-medium transition ${activeTab === 'updateData'
-                            ? 'bg-pink-500 text-white shadow-md'
-                            : 'text-gray-600 hover:bg-gray-100'
+                        ? 'bg-pink-500 text-white shadow-md'
+                        : 'text-gray-600 hover:bg-gray-100'
                         }`}
                 >
                     <FaEdit className="inline mr-2" />

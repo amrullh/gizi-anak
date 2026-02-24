@@ -1,17 +1,35 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { FaBook, FaChartBar, FaPlusCircle, FaUser, FaBell } from 'react-icons/fa'
+import { useAuth } from '@/context/AuthContext'
+import { useEffect } from 'react'
 
 export default function ParentLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
+    const router = useRouter()
+    const { user, loading } = useAuth()
 
-    const navItems = [
-        { href: '/parent/articles', icon: FaBook, label: 'Artikel', position: 'left' },
-        { href: '/parent/dashboard', icon: FaChartBar, label: 'Laporan', position: 'center' },
-        { href: '/parent/input', icon: FaPlusCircle, label: 'Input', position: 'right' },
-    ]
+    useEffect(() => {
+        if (!loading && (!user || user.role !== 'parent')) {
+            router.push('/login')
+        }
+    }, [user, loading, router])
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
+            </div>
+        )
+    }
+
+    if (!user || user.role !== 'parent') {
+        return null
+    }
+
+    const initial = user.name ? user.name.charAt(0).toUpperCase() : 'U'
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -29,9 +47,12 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
                             <FaBell size={20} />
                             <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                         </button>
-                        <button className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                            <FaUser size={16} className="text-gray-600" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-700 hidden sm:inline">{user.name || user.email}</span>
+                            <div className="w-8 h-8 bg-gradient-to-br from-pink-400 to-pink-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-sm">
+                                {initial}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -45,7 +66,6 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
             <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
                 <div className="max-w-5xl mx-auto px-6 py-2">
                     <div className="flex justify-between items-center relative">
-                        {/* LEFT - Artikel */}
                         <Link
                             href="/parent/articles"
                             className={`flex flex-col items-center py-2 px-4 ${pathname === '/parent/articles' ? 'text-pink-500' : 'text-gray-500'}`}
@@ -54,7 +74,6 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
                             <span className="text-xs mt-1">Artikel</span>
                         </Link>
 
-                        {/* CENTER - Laporan (Floating Button) */}
                         <Link
                             href="/parent/dashboard"
                             className="flex flex-col items-center -mt-8"
@@ -68,7 +87,6 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
                             <span className="text-xs mt-1 text-gray-600">Laporan</span>
                         </Link>
 
-                        {/* RIGHT - Input */}
                         <Link
                             href="/parent/input"
                             className={`flex flex-col items-center py-2 px-4 ${pathname === '/parent/input' ? 'text-pink-500' : 'text-gray-500'}`}

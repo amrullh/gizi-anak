@@ -1,16 +1,37 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/context/AuthContext'
 
 export default function LoginPage() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+    const [error, setError] = useState('')
+    const { login, user } = useAuth() // ambil user dari context
+    const router = useRouter()
 
-    const handleSubmit = (e: React.FormEvent) => {
+    // Redirect ketika user sudah terisi (login sukses)
+    useEffect(() => {
+        if (user) {
+            if (user.role === 'parent') {
+                router.push('/parent/dashboard')
+            } else if (user.role === 'admin') {
+                router.push('/admin/dashboard')
+            }
+        }
+    }, [user, router])
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        // TODO: Handle login
-        console.log({ email, password })
+        setError('')
+        try {
+            await login(email, password)
+            // redirect akan di-handle oleh useEffect di atas
+        } catch (err: any) {
+            setError(err.message)
+        }
     }
 
     return (
@@ -22,6 +43,11 @@ export default function LoginPage() {
                 </div>
 
                 <div className="bg-white p-8 rounded-xl shadow-md">
+                    {error && (
+                        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
+                            {error}
+                        </div>
+                    )}
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>
                             <label className="block text-sm font-medium mb-2">Email</label>
@@ -29,7 +55,7 @@ export default function LoginPage() {
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full p-3 border border-gray-300 rounded-lg"
+                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                                 placeholder="nama@email.com"
                                 required
                             />
@@ -41,7 +67,7 @@ export default function LoginPage() {
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full p-3 border border-gray-300 rounded-lg"
+                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                                 placeholder="••••••••"
                                 required
                             />
@@ -49,8 +75,8 @@ export default function LoginPage() {
 
                         <div className="flex items-center justify-between">
                             <div className="flex items-center">
-                                <input type="checkbox" className="h-4 w-4 text-pink-500" />
-                                <label className="ml-2 text-sm">Ingat saya</label>
+                                <input type="checkbox" className="h-4 w-4 text-pink-500 rounded" />
+                                <label className="ml-2 text-sm text-gray-600">Ingat saya</label>
                             </div>
                             <Link href="#" className="text-sm text-pink-500 hover:underline">
                                 Lupa password?
@@ -59,7 +85,7 @@ export default function LoginPage() {
 
                         <button
                             type="submit"
-                            className="w-full bg-pink-500 text-white p-3 rounded-lg hover:bg-pink-600"
+                            className="w-full bg-pink-500 text-white p-3 rounded-lg hover:bg-pink-600 transition font-medium"
                         >
                             Login
                         </button>
@@ -79,13 +105,13 @@ export default function LoginPage() {
                         <p className="text-sm text-gray-600 mb-3">Login sebagai (testing):</p>
                         <div className="grid grid-cols-2 gap-3">
                             <Link
-                                href="/parent"
+                                href="/parent/dashboard"
                                 className="bg-pink-50 text-pink-700 p-3 rounded-lg text-center hover:bg-pink-100"
                             >
                                 👨‍👩‍👧 Orang Tua
                             </Link>
                             <Link
-                                href="/admin"
+                                href="/admin/dashboard"
                                 className="bg-purple-50 text-purple-700 p-3 rounded-lg text-center hover:bg-purple-100"
                             >
                                 🏥 Admin Puskesmas
