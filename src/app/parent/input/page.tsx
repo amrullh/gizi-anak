@@ -10,8 +10,52 @@ type TabType = 'addChild' | 'inputData' | 'updateData'
 
 export default function InputPage() {
     const [activeTab, setActiveTab] = useState<TabType>('addChild')
-    const { children, loading } = useChildren()
+    const { children, loading, addChild } = useChildren()
 
+    // State untuk form tambah anak
+    const [childForm, setChildForm] = useState({
+        name: '',
+        birthDate: '',
+        gender: 'male',
+        birthWeight: '',
+        birthHeight: ''
+    })
+    const [isSubmitting, setIsSubmitting] = useState(false)
+
+    const handleChildFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target
+        setChildForm(prev => ({ ...prev, [name]: value }))
+    }
+
+    const handleAddChild = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setIsSubmitting(true)
+        try {
+            await addChild({
+                name: childForm.name,
+                birthDate: new Date(childForm.birthDate),
+                gender: childForm.gender as 'male' | 'female',
+                birthWeight: childForm.birthWeight ? parseFloat(childForm.birthWeight) : undefined,
+                birthHeight: childForm.birthHeight ? parseFloat(childForm.birthHeight) : undefined,
+            })
+            // Reset form setelah sukses
+            setChildForm({
+                name: '',
+                birthDate: '',
+                gender: 'male',
+                birthWeight: '',
+                birthHeight: ''
+            })
+            alert('Data anak berhasil ditambahkan!')
+        } catch (error) {
+            console.error(error)
+            alert('Gagal menambahkan data anak')
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    // ... (kode selanjutnya akan sama, hanya bagian yang berubah ditambahkan)
     return (
         <div className="space-y-6">
             {/* HEADER */}
@@ -59,22 +103,42 @@ export default function InputPage() {
                 {activeTab === 'addChild' && (
                     <div className="space-y-5">
                         <h2 className="text-lg font-semibold text-gray-800">Tambah Data Anak</h2>
-                        <form className="space-y-4">
+                        <form onSubmit={handleAddChild} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium mb-2">Nama Lengkap Anak</label>
-                                <input type="text" placeholder="Contoh: Budi Santoso" className="input-field" />
+                                <input
+                                    type="text"
+                                    name="name"
+                                    value={childForm.name}
+                                    onChange={handleChildFormChange}
+                                    placeholder="Contoh: Budi Santoso"
+                                    className="input-field"
+                                    required
+                                />
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Tanggal Lahir</label>
-                                    <input type="date" className="input-field" />
+                                    <input
+                                        type="date"
+                                        name="birthDate"
+                                        value={childForm.birthDate}
+                                        onChange={handleChildFormChange}
+                                        className="input-field"
+                                        required
+                                    />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Jenis Kelamin</label>
-                                    <select className="input-field">
-                                        <option>Laki-laki</option>
-                                        <option>Perempuan</option>
+                                    <select
+                                        name="gender"
+                                        value={childForm.gender}
+                                        onChange={handleChildFormChange}
+                                        className="input-field"
+                                    >
+                                        <option value="male">Laki-laki</option>
+                                        <option value="female">Perempuan</option>
                                     </select>
                                 </div>
                             </div>
@@ -82,23 +146,41 @@ export default function InputPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium mb-2 flex items-center">
-                                        <FaWeight className="mr-2 text-gray-500" /> Berat Lahir (kg)
+                                        <FaWeight className="mr-2 text-gray-500" /> Berat Lahir (kg) <span className="text-xs text-gray-400 ml-1">(opsional)</span>
                                     </label>
-                                    <input type="number" step="0.1" placeholder="3.2" className="input-field" />
+                                    <input
+                                        type="number"
+                                        name="birthWeight"
+                                        value={childForm.birthWeight}
+                                        onChange={handleChildFormChange}
+                                        step="0.1"
+                                        placeholder="3.2"
+                                        className="input-field"
+                                    />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-2 flex items-center">
-                                        <FaRulerVertical className="mr-2 text-gray-500" /> Tinggi Lahir (cm)
+                                        <FaRulerVertical className="mr-2 text-gray-500" /> Tinggi Lahir (cm) <span className="text-xs text-gray-400 ml-1">(opsional)</span>
                                     </label>
-                                    <input type="number" placeholder="48" className="input-field" />
+                                    <input
+                                        type="number"
+                                        name="birthHeight"
+                                        value={childForm.birthHeight}
+                                        onChange={handleChildFormChange}
+                                        placeholder="48"
+                                        className="input-field"
+                                    />
                                 </div>
                             </div>
 
-                            <Button fullWidth>Simpan Data Anak</Button>
+                            <button type="submit" disabled={isSubmitting} className="w-full bg-pink-500 hover:bg-pink-600 text-white font-medium py-3 rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                {isSubmitting ? 'Menyimpan...' : 'Simpan Data Anak'}
+                            </button>
                         </form>
                     </div>
                 )}
 
+                {/* Bagian Input Data Perkembangan (sama seperti commit 2, hanya perlu penambahan state selectedChildId nanti) */}
                 {activeTab === 'inputData' && (
                     <div className="space-y-5">
                         <h2 className="text-lg font-semibold text-gray-800">Input Data Perkembangan</h2>
