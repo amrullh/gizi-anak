@@ -5,6 +5,7 @@ import { FaChild, FaWeight, FaRulerVertical, FaCalendarAlt, FaPlus, FaEdit } fro
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import { useChildren } from '@/hooks/useChildren'
+import { useGrowthRecords } from '@/hooks/useGrowthRecords'
 
 type TabType = 'addChild' | 'inputData' | 'updateData'
 
@@ -22,6 +23,17 @@ export default function InputPage() {
     })
     const [isSubmitting, setIsSubmitting] = useState(false)
 
+    // State untuk form input data perkembangan
+    const [selectedChildId, setSelectedChildId] = useState<string>('')
+    const { records: growthRecords, loading: recordsLoading, addRecord } = useGrowthRecords(selectedChildId)
+    const [growthForm, setGrowthForm] = useState({
+        date: new Date().toISOString().split('T')[0],
+        weight: '',
+        height: '',
+        notes: ''
+    })
+    const [isSubmittingGrowth, setIsSubmittingGrowth] = useState(false)
+
     const handleChildFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target
         setChildForm(prev => ({ ...prev, [name]: value }))
@@ -38,7 +50,6 @@ export default function InputPage() {
                 birthWeight: childForm.birthWeight ? parseFloat(childForm.birthWeight) : undefined,
                 birthHeight: childForm.birthHeight ? parseFloat(childForm.birthHeight) : undefined,
             })
-            // Reset form setelah sukses
             setChildForm({
                 name: '',
                 birthDate: '',
@@ -55,7 +66,41 @@ export default function InputPage() {
         }
     }
 
-    // ... (kode selanjutnya akan sama, hanya bagian yang berubah ditambahkan)
+    const handleGrowthFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target
+        setGrowthForm(prev => ({ ...prev, [name]: value }))
+    }
+
+    const handleAddGrowthRecord = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!selectedChildId) {
+            alert('Pilih anak terlebih dahulu')
+            return
+        }
+        setIsSubmittingGrowth(true)
+        try {
+            await addRecord({
+                childId: selectedChildId,
+                date: new Date(growthForm.date),
+                weight: parseFloat(growthForm.weight),
+                height: parseFloat(growthForm.height),
+                notes: growthForm.notes || undefined,
+            })
+            setGrowthForm({
+                date: new Date().toISOString().split('T')[0],
+                weight: '',
+                height: '',
+                notes: ''
+            })
+            alert('Data pengukuran berhasil disimpan!')
+        } catch (error) {
+            console.error(error)
+            alert('Gagal menyimpan data pengukuran')
+        } finally {
+            setIsSubmittingGrowth(false)
+        }
+    }
+
     return (
         <div className="space-y-6">
             {/* HEADER */}
@@ -173,14 +218,13 @@ export default function InputPage() {
                                 </div>
                             </div>
 
-                            <button type="submit" disabled={isSubmitting} className="w-full bg-pink-500 hover:bg-pink-600 text-white font-medium py-3 rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            <button type="submit" className="w-full px-4 py-2 bg-pink-500 text-white rounded-lg font-medium hover:bg-pink-600 disabled:bg-gray-400" disabled={isSubmitting}>
                                 {isSubmitting ? 'Menyimpan...' : 'Simpan Data Anak'}
                             </button>
                         </form>
                     </div>
                 )}
 
-                {/* Bagian Input Data Perkembangan (sama seperti commit 2, hanya perlu penambahan state selectedChildId nanti) */}
                 {activeTab === 'inputData' && (
                     <div className="space-y-5">
                         <h2 className="text-lg font-semibold text-gray-800">Input Data Perkembangan</h2>
@@ -197,7 +241,14 @@ export default function InputPage() {
                                 <div className="space-y-3">
                                     {children.map(child => (
                                         <label key={child.id} className="flex items-center p-4 border rounded-xl hover:bg-gray-50 cursor-pointer">
-                                            <input type="radio" name="child" value={child.id} className="mr-4" />
+                                            <input
+                                                type="radio"
+                                                name="child"
+                                                value={child.id}
+                                                checked={selectedChildId === child.id}
+                                                onChange={(e) => setSelectedChildId(e.target.value)}
+                                                className="mr-4"
+                                            />
                                             <div>
                                                 <div className="font-medium text-gray-800">{child.name}</div>
                                                 <div className="text-sm text-gray-600">{child.age}</div>
@@ -208,37 +259,70 @@ export default function InputPage() {
                             )}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium mb-2">
-                                    <FaCalendarAlt className="inline mr-2" /> Tanggal
-                                </label>
-                                <input type="date" className="input-field" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-2">
-                                    <FaWeight className="inline mr-2" /> Berat (kg)
-                                </label>
-                                <input type="number" step="0.1" placeholder="11.5" className="input-field" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-2">
-                                    <FaRulerVertical className="inline mr-2" /> Tinggi (cm)
-                                </label>
-                                <input type="number" placeholder="80" className="input-field" />
-                            </div>
-                        </div>
+                        {selectedChildId && (
+                            <form onSubmit={handleAddGrowthRecord} className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">
+                                            <FaCalendarAlt className="inline mr-2" /> Tanggal
+                                        </label>
+                                        <input
+                                            type="date"
+                                            name="date"
+                                            value={growthForm.date}
+                                            onChange={handleGrowthFormChange}
+                                            className="input-field"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">
+                                            <FaWeight className="inline mr-2" /> Berat (kg)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            name="weight"
+                                            value={growthForm.weight}
+                                            onChange={handleGrowthFormChange}
+                                            step="0.1"
+                                            placeholder="11.5"
+                                            className="input-field"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">
+                                            <FaRulerVertical className="inline mr-2" /> Tinggi (cm)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            name="height"
+                                            value={growthForm.height}
+                                            onChange={handleGrowthFormChange}
+                                            placeholder="80"
+                                            className="input-field"
+                                            required
+                                        />
+                                    </div>
+                                </div>
 
-                        <div>
-                            <label className="block text-sm font-medium mb-2">Catatan</label>
-                            <textarea
-                                rows={3}
-                                placeholder="Contoh: Sedang batuk pilek, nafsu makan menurun"
-                                className="input-field"
-                            ></textarea>
-                        </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Catatan</label>
+                                    <textarea
+                                        name="notes"
+                                        rows={3}
+                                        value={growthForm.notes}
+                                        onChange={handleGrowthFormChange}
+                                        placeholder="Contoh: Sedang batuk pilek, nafsu makan menurun"
+                                        className="input-field"
+                                    ></textarea>
+                                </div>
 
-                        <Button fullWidth>Simpan Pengukuran</Button>
+                                <button type="submit" className="w-full px-4 py-2 bg-pink-500 text-white rounded-lg font-medium hover:bg-pink-600 disabled:bg-gray-400" disabled={isSubmittingGrowth}>
+                                    {isSubmittingGrowth ? 'Menyimpan...' : 'Simpan Pengukuran'}
+                                </button>
+                            </form>
+                        )}
                     </div>
                 )}
 
