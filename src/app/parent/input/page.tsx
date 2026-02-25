@@ -4,16 +4,13 @@ import { useState } from 'react'
 import { FaChild, FaWeight, FaRulerVertical, FaCalendarAlt, FaPlus, FaEdit } from 'react-icons/fa'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
+import { useChildren } from '@/hooks/useChildren'
 
 type TabType = 'addChild' | 'inputData' | 'updateData'
 
 export default function InputPage() {
     const [activeTab, setActiveTab] = useState<TabType>('addChild')
-
-    const children = [
-        { id: 1, name: 'Budi Santoso', age: '2 tahun' },
-        { id: 2, name: 'Siti Aisyah', age: '8 bulan' }
-    ]
+    const { children, loading } = useChildren()
 
     return (
         <div className="space-y-6">
@@ -108,17 +105,25 @@ export default function InputPage() {
 
                         <div>
                             <label className="block text-sm font-medium mb-3">Pilih Anak</label>
-                            <div className="space-y-3">
-                                {children.map(child => (
-                                    <label key={child.id} className="flex items-center p-4 border rounded-xl hover:bg-gray-50 cursor-pointer">
-                                        <input type="radio" name="child" className="mr-4" />
-                                        <div>
-                                            <div className="font-medium text-gray-800">{child.name}</div>
-                                            <div className="text-sm text-gray-600">{child.age}</div>
-                                        </div>
-                                    </label>
-                                ))}
-                            </div>
+                            {loading ? (
+                                <div className="text-center py-4 text-gray-500">Memuat data anak...</div>
+                            ) : children.length === 0 ? (
+                                <div className="text-center py-4 text-gray-500">
+                                    Belum ada data anak. Silakan tambah anak terlebih dahulu.
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {children.map(child => (
+                                        <label key={child.id} className="flex items-center p-4 border rounded-xl hover:bg-gray-50 cursor-pointer">
+                                            <input type="radio" name="child" value={child.id} className="mr-4" />
+                                            <div>
+                                                <div className="font-medium text-gray-800">{child.name}</div>
+                                                <div className="text-sm text-gray-600">{child.age}</div>
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
@@ -159,7 +164,31 @@ export default function InputPage() {
                     <div className="space-y-5">
                         <h2 className="text-lg font-semibold text-gray-800">Update Data Anak</h2>
 
+                        <div>
+                            <label className="block text-sm font-medium mb-3">Pilih Anak</label>
+                            {loading ? (
+                                <div className="text-center py-4 text-gray-500">Memuat data anak...</div>
+                            ) : children.length === 0 ? (
+                                <div className="text-center py-4 text-gray-500">
+                                    Belum ada data anak.
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {children.map(child => (
+                                        <label key={child.id} className="flex items-center p-4 border rounded-xl hover:bg-gray-50 cursor-pointer">
+                                            <input type="radio" name="childUpdate" value={child.id} className="mr-4" />
+                                            <div>
+                                                <div className="font-medium text-gray-800">{child.name}</div>
+                                                <div className="text-sm text-gray-600">{child.age}</div>
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
                         <div className="space-y-4">
+                            {/* Akan diisi dengan riwayat pengukuran di commit 5 */}
                             {[1, 2, 3].map(item => (
                                 <div key={item} className="border rounded-xl p-4 hover:bg-gray-50">
                                     <div className="flex justify-between items-start mb-3">

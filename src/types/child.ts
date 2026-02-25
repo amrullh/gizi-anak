@@ -8,4 +8,5 @@ export interface Child {
     birthHeight?: number;
     createdAt: Date;
     updatedAt: Date;
+    age?: number;
 }
