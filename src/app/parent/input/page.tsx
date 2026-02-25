@@ -34,6 +34,10 @@ export default function InputPage() {
     })
     const [isSubmittingGrowth, setIsSubmittingGrowth] = useState(false)
 
+    // State untuk tab update
+    const [selectedUpdateChildId, setSelectedUpdateChildId] = useState<string>('')
+    const { records: updateRecords, loading: updateRecordsLoading } = useGrowthRecords(selectedUpdateChildId)
+
     const handleChildFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target
         setChildForm(prev => ({ ...prev, [name]: value }))
@@ -218,9 +222,9 @@ export default function InputPage() {
                                 </div>
                             </div>
 
-                            <button type="submit" className="w-full px-4 py-2 bg-pink-500 text-white rounded-lg font-medium hover:bg-pink-600 disabled:bg-gray-400" disabled={isSubmitting}>
+                            <Button fullWidth onClick={() => handleAddChild({} as React.FormEvent)}>
                                 {isSubmitting ? 'Menyimpan...' : 'Simpan Data Anak'}
-                            </button>
+                            </Button>
                         </form>
                     </div>
                 )}
@@ -318,9 +322,9 @@ export default function InputPage() {
                                     ></textarea>
                                 </div>
 
-                                <button type="submit" className="w-full px-4 py-2 bg-pink-500 text-white rounded-lg font-medium hover:bg-pink-600 disabled:bg-gray-400" disabled={isSubmittingGrowth}>
+                                <Button fullWidth onClick={() => handleAddGrowthRecord({} as React.FormEvent)}>
                                     {isSubmittingGrowth ? 'Menyimpan...' : 'Simpan Pengukuran'}
-                                </button>
+                                </Button>
                             </form>
                         )}
                     </div>
@@ -342,7 +346,14 @@ export default function InputPage() {
                                 <div className="space-y-3">
                                     {children.map(child => (
                                         <label key={child.id} className="flex items-center p-4 border rounded-xl hover:bg-gray-50 cursor-pointer">
-                                            <input type="radio" name="childUpdate" value={child.id} className="mr-4" />
+                                            <input
+                                                type="radio"
+                                                name="childUpdate"
+                                                value={child.id}
+                                                checked={selectedUpdateChildId === child.id}
+                                                onChange={(e) => setSelectedUpdateChildId(e.target.value)}
+                                                className="mr-4"
+                                            />
                                             <div>
                                                 <div className="font-medium text-gray-800">{child.name}</div>
                                                 <div className="text-sm text-gray-600">{child.age}</div>
@@ -353,32 +364,38 @@ export default function InputPage() {
                             )}
                         </div>
 
-                        <div className="space-y-4">
-                            {/* Akan diisi dengan riwayat pengukuran di commit 5 */}
-                            {[1, 2, 3].map(item => (
-                                <div key={item} className="border rounded-xl p-4 hover:bg-gray-50">
-                                    <div className="flex justify-between items-start mb-3">
-                                        <div>
-                                            <div className="font-medium text-gray-800">Data {item}</div>
-                                            <div className="text-sm text-gray-600">Budi Santoso • 15 Jan 2024</div>
-                                        </div>
-                                        <button className="text-blue-500 text-sm font-medium hover:text-blue-600">
-                                            Edit
-                                        </button>
+                        {selectedUpdateChildId && (
+                            <div className="space-y-4">
+                                {updateRecordsLoading ? (
+                                    <div className="text-center py-4 text-gray-500">Memuat riwayat...</div>
+                                ) : updateRecords.length === 0 ? (
+                                    <div className="text-center py-4 text-gray-500">
+                                        Belum ada data pengukuran untuk anak ini.
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="bg-gray-50 p-3 rounded-lg">
-                                            <div className="text-xs text-gray-500">Berat Badan</div>
-                                            <div className="font-semibold">11.5 kg</div>
+                                ) : (
+                                    updateRecords.map(record => (
+                                        <div key={record.id} className="border rounded-xl p-4 hover:bg-gray-50">
+                                            <div className="flex justify-between items-start mb-3">
+                                                <div>
+                                                    <div className="font-medium text-gray-800">
+                                                        {record.date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                                    </div>
+                                                    <div className="text-sm text-gray-600">
+                                                        Berat: {record.weight} kg • Tinggi: {record.height} cm
+                                                    </div>
+                                                </div>
+                                                <button className="text-blue-500 text-sm font-medium hover:text-blue-600">
+                                                    Edit
+                                                </button>
+                                            </div>
+                                            {record.notes && (
+                                                <div className="text-sm text-gray-500 mt-2">Catatan: {record.notes}</div>
+                                            )}
                                         </div>
-                                        <div className="bg-gray-50 p-3 rounded-lg">
-                                            <div className="text-xs text-gray-500">Tinggi Badan</div>
-                                            <div className="font-semibold">80 cm</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                    ))
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
             </Card>
