@@ -1,29 +1,34 @@
 'use client'
 
 import { useState } from 'react'
-import { FaChild, FaWeight, FaRulerVertical, FaCalendarAlt, FaPlus, FaEdit } from 'react-icons/fa'
+import { FaChild, FaWeight, FaRulerVertical, FaCalendarAlt, FaPlus, FaEdit, FaHistory } from 'react-icons/fa'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import { useChildren } from '@/hooks/useChildren'
 import { useGrowthRecords } from '@/hooks/useGrowthRecords'
 
-type TabType = 'addChild' | 'inputData' | 'updateData'
+type TabType = 'addChild' | 'growthRecords'
 
 export default function InputPage() {
     const [activeTab, setActiveTab] = useState<TabType>('addChild')
     const { children, loading, addChild } = useChildren()
 
-    // State untuk form tambah anak
+    // State untuk form tambah anak + pengukuran pertama
     const [childForm, setChildForm] = useState({
         name: '',
         birthDate: '',
         gender: 'male',
         birthWeight: '',
-        birthHeight: ''
+        birthHeight: '',
+        // pengukuran pertama
+        measurementDate: new Date().toISOString().split('T')[0],
+        weight: '',
+        height: '',
+        notes: ''
     })
     const [isSubmitting, setIsSubmitting] = useState(false)
 
-    // State untuk form input data perkembangan
+    // State untuk tab catatan pertumbuhan
     const [selectedChildId, setSelectedChildId] = useState<string>('')
     const { records: growthRecords, loading: recordsLoading, addRecord } = useGrowthRecords(selectedChildId)
     const [growthForm, setGrowthForm] = useState({
@@ -34,11 +39,7 @@ export default function InputPage() {
     })
     const [isSubmittingGrowth, setIsSubmittingGrowth] = useState(false)
 
-    // State untuk tab update
-    const [selectedUpdateChildId, setSelectedUpdateChildId] = useState<string>('')
-    const { records: updateRecords, loading: updateRecordsLoading } = useGrowthRecords(selectedUpdateChildId)
-
-    const handleChildFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleChildFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target
         setChildForm(prev => ({ ...prev, [name]: value }))
     }
@@ -47,24 +48,43 @@ export default function InputPage() {
         e.preventDefault()
         setIsSubmitting(true)
         try {
-            await addChild({
+            // 1. Buat child
+            const newChild = await addChild({
                 name: childForm.name,
                 birthDate: new Date(childForm.birthDate),
                 gender: childForm.gender as 'male' | 'female',
                 birthWeight: childForm.birthWeight ? parseFloat(childForm.birthWeight) : undefined,
                 birthHeight: childForm.birthHeight ? parseFloat(childForm.birthHeight) : undefined,
             })
+
+            // 2. Jika ada data pengukuran pertama, buat growth record
+            if (childForm.weight && childForm.height) {
+                await addRecord({
+                    childId: newChild.id,
+                    date: new Date(childForm.measurementDate),
+                    weight: parseFloat(childForm.weight),
+                    height: parseFloat(childForm.height),
+                    notes: childForm.notes || undefined,
+                })
+            }
+
+            // Reset form
             setChildForm({
                 name: '',
                 birthDate: '',
                 gender: 'male',
                 birthWeight: '',
-                birthHeight: ''
+                birthHeight: '',
+                measurementDate: new Date().toISOString().split('T')[0],
+                weight: '',
+                height: '',
+                notes: ''
             })
-            alert('Data anak berhasil ditambahkan!')
+
+            alert('Data anak dan pengukuran pertama berhasil disimpan!')
         } catch (error) {
             console.error(error)
-            alert('Gagal menambahkan data anak')
+            alert('Gagal menyimpan data')
         } finally {
             setIsSubmitting(false)
         }
@@ -96,10 +116,10 @@ export default function InputPage() {
                 height: '',
                 notes: ''
             })
-            alert('Data pengukuran berhasil disimpan!')
+            alert('Data pengukuran berhasil ditambahkan!')
         } catch (error) {
             console.error(error)
-            alert('Gagal menyimpan data pengukuran')
+            alert('Gagal menambahkan data pengukuran')
         } finally {
             setIsSubmittingGrowth(false)
         }
@@ -109,8 +129,8 @@ export default function InputPage() {
         <div className="space-y-6">
             {/* HEADER */}
             <div>
-                <h1 className="text-2xl font-bold text-gray-800">Kelola Data</h1>
-                <p className="text-gray-600">Tambah anak atau input data perkembangan</p>
+                <h1 className="text-2xl font-bold text-gray-800">Kelola Data Anak</h1>
+                <p className="text-gray-600">Tambah anak atau catat pertumbuhannya</p>
             </div>
 
             {/* TABS */}
@@ -126,24 +146,14 @@ export default function InputPage() {
                     Tambah Anak
                 </button>
                 <button
-                    onClick={() => setActiveTab('inputData')}
-                    className={`flex-1 py-3 rounded-xl text-sm font-medium transition ${activeTab === 'inputData'
+                    onClick={() => setActiveTab('growthRecords')}
+                    className={`flex-1 py-3 rounded-xl text-sm font-medium transition ${activeTab === 'growthRecords'
                         ? 'bg-pink-500 text-white shadow-md'
                         : 'text-gray-600 hover:bg-gray-100'
                         }`}
                 >
-                    <FaPlus className="inline mr-2" />
-                    Input Data
-                </button>
-                <button
-                    onClick={() => setActiveTab('updateData')}
-                    className={`flex-1 py-3 rounded-xl text-sm font-medium transition ${activeTab === 'updateData'
-                        ? 'bg-pink-500 text-white shadow-md'
-                        : 'text-gray-600 hover:bg-gray-100'
-                        }`}
-                >
-                    <FaEdit className="inline mr-2" />
-                    Update Data
+                    <FaHistory className="inline mr-2" />
+                    Catatan Pertumbuhan
                 </button>
             </div>
 
@@ -151,8 +161,9 @@ export default function InputPage() {
             <Card>
                 {activeTab === 'addChild' && (
                     <div className="space-y-5">
-                        <h2 className="text-lg font-semibold text-gray-800">Tambah Data Anak</h2>
+                        <h2 className="text-lg font-semibold text-gray-800">Tambah Anak Baru</h2>
                         <form onSubmit={handleAddChild} className="space-y-4">
+                            {/* Data Anak */}
                             <div>
                                 <label className="block text-sm font-medium mb-2">Nama Lengkap Anak</label>
                                 <input
@@ -222,17 +233,75 @@ export default function InputPage() {
                                 </div>
                             </div>
 
-                            <Button fullWidth onClick={() => handleAddChild({} as React.FormEvent)}>
+                            {/* Pengukuran Pertama */}
+                            <div className="border-t pt-4 mt-4">
+                                <h3 className="font-medium text-gray-700 mb-3">Pengukuran Pertama (opsional)</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">
+                                            <FaCalendarAlt className="inline mr-2" /> Tanggal
+                                        </label>
+                                        <input
+                                            type="date"
+                                            name="measurementDate"
+                                            value={childForm.measurementDate}
+                                            onChange={handleChildFormChange}
+                                            className="input-field"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">
+                                            <FaWeight className="inline mr-2" /> Berat (kg)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            name="weight"
+                                            value={childForm.weight}
+                                            onChange={handleChildFormChange}
+                                            step="0.1"
+                                            placeholder="11.5"
+                                            className="input-field"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">
+                                            <FaRulerVertical className="inline mr-2" /> Tinggi (cm)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            name="height"
+                                            value={childForm.height}
+                                            onChange={handleChildFormChange}
+                                            placeholder="80"
+                                            className="input-field"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="mt-3">
+                                    <label className="block text-sm font-medium mb-2">Catatan</label>
+                                    <textarea
+                                        name="notes"
+                                        rows={2}
+                                        value={childForm.notes}
+                                        onChange={handleChildFormChange}
+                                        placeholder="Contoh: Kondisi saat pengukuran pertama"
+                                        className="input-field"
+                                    />
+                                </div>
+                            </div>
+
+                            <button type="submit" className="w-full bg-pink-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed" disabled={isSubmitting}>
                                 {isSubmitting ? 'Menyimpan...' : 'Simpan Data Anak'}
-                            </Button>
+                            </button>
                         </form>
                     </div>
                 )}
 
-                {activeTab === 'inputData' && (
+                {activeTab === 'growthRecords' && (
                     <div className="space-y-5">
-                        <h2 className="text-lg font-semibold text-gray-800">Input Data Perkembangan</h2>
+                        <h2 className="text-lg font-semibold text-gray-800">Catatan Pertumbuhan</h2>
 
+                        {/* Pilih Anak */}
                         <div>
                             <label className="block text-sm font-medium mb-3">Pilih Anak</label>
                             {loading ? (
@@ -247,7 +316,7 @@ export default function InputPage() {
                                         <label key={child.id} className="flex items-center p-4 border rounded-xl hover:bg-gray-50 cursor-pointer">
                                             <input
                                                 type="radio"
-                                                name="child"
+                                                name="childGrowth"
                                                 value={child.id}
                                                 checked={selectedChildId === child.id}
                                                 onChange={(e) => setSelectedChildId(e.target.value)}
@@ -264,137 +333,114 @@ export default function InputPage() {
                         </div>
 
                         {selectedChildId && (
-                            <form onSubmit={handleAddGrowthRecord} className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium mb-2">
-                                            <FaCalendarAlt className="inline mr-2" /> Tanggal
-                                        </label>
-                                        <input
-                                            type="date"
-                                            name="date"
-                                            value={growthForm.date}
-                                            onChange={handleGrowthFormChange}
-                                            className="input-field"
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-2">
-                                            <FaWeight className="inline mr-2" /> Berat (kg)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="weight"
-                                            value={growthForm.weight}
-                                            onChange={handleGrowthFormChange}
-                                            step="0.1"
-                                            placeholder="11.5"
-                                            className="input-field"
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-2">
-                                            <FaRulerVertical className="inline mr-2" /> Tinggi (cm)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="height"
-                                            value={growthForm.height}
-                                            onChange={handleGrowthFormChange}
-                                            placeholder="80"
-                                            className="input-field"
-                                            required
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">Catatan</label>
-                                    <textarea
-                                        name="notes"
-                                        rows={3}
-                                        value={growthForm.notes}
-                                        onChange={handleGrowthFormChange}
-                                        placeholder="Contoh: Sedang batuk pilek, nafsu makan menurun"
-                                        className="input-field"
-                                    ></textarea>
-                                </div>
-
-                                <Button fullWidth onClick={() => handleAddGrowthRecord({} as React.FormEvent)}>
-                                    {isSubmittingGrowth ? 'Menyimpan...' : 'Simpan Pengukuran'}
-                                </Button>
-                            </form>
-                        )}
-                    </div>
-                )}
-
-                {activeTab === 'updateData' && (
-                    <div className="space-y-5">
-                        <h2 className="text-lg font-semibold text-gray-800">Update Data Anak</h2>
-
-                        <div>
-                            <label className="block text-sm font-medium mb-3">Pilih Anak</label>
-                            {loading ? (
-                                <div className="text-center py-4 text-gray-500">Memuat data anak...</div>
-                            ) : children.length === 0 ? (
-                                <div className="text-center py-4 text-gray-500">
-                                    Belum ada data anak.
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {children.map(child => (
-                                        <label key={child.id} className="flex items-center p-4 border rounded-xl hover:bg-gray-50 cursor-pointer">
-                                            <input
-                                                type="radio"
-                                                name="childUpdate"
-                                                value={child.id}
-                                                checked={selectedUpdateChildId === child.id}
-                                                onChange={(e) => setSelectedUpdateChildId(e.target.value)}
-                                                className="mr-4"
-                                            />
+                            <>
+                                {/* Form Tambah Pengukuran Baru */}
+                                <div className="border-t pt-4">
+                                    <h3 className="font-medium text-gray-700 mb-3">Tambah Pengukuran Baru</h3>
+                                    <form onSubmit={handleAddGrowthRecord} className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <div className="font-medium text-gray-800">{child.name}</div>
-                                                <div className="text-sm text-gray-600">{child.age}</div>
+                                                <label className="block text-sm font-medium mb-2">
+                                                    <FaCalendarAlt className="inline mr-2" /> Tanggal
+                                                </label>
+                                                <input
+                                                    type="date"
+                                                    name="date"
+                                                    value={growthForm.date}
+                                                    onChange={handleGrowthFormChange}
+                                                    className="input-field"
+                                                    required
+                                                />
                                             </div>
-                                        </label>
-                                    ))}
+                                            <div>
+                                                <label className="block text-sm font-medium mb-2">
+                                                    <FaWeight className="inline mr-2" /> Berat (kg)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    name="weight"
+                                                    value={growthForm.weight}
+                                                    onChange={handleGrowthFormChange}
+                                                    step="0.1"
+                                                    placeholder="11.5"
+                                                    className="input-field"
+                                                    required
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium mb-2">
+                                                    <FaRulerVertical className="inline mr-2" /> Tinggi (cm)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    name="height"
+                                                    value={growthForm.height}
+                                                    onChange={handleGrowthFormChange}
+                                                    placeholder="80"
+                                                    className="input-field"
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-2">Catatan</label>
+                                            <textarea
+                                                name="notes"
+                                                rows={2}
+                                                value={growthForm.notes}
+                                                onChange={handleGrowthFormChange}
+                                                placeholder="Contoh: Sedang batuk pilek"
+                                                className="input-field"
+                                            />
+                                        </div>
+                                        <button type="submit" className="w-full bg-pink-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed" disabled={isSubmittingGrowth}>
+                                            {isSubmittingGrowth ? 'Menyimpan...' : 'Tambah Pengukuran'}
+                                        </button>
+                                    </form>
                                 </div>
-                            )}
-                        </div>
 
-                        {selectedUpdateChildId && (
-                            <div className="space-y-4">
-                                {updateRecordsLoading ? (
-                                    <div className="text-center py-4 text-gray-500">Memuat riwayat...</div>
-                                ) : updateRecords.length === 0 ? (
-                                    <div className="text-center py-4 text-gray-500">
-                                        Belum ada data pengukuran untuk anak ini.
-                                    </div>
-                                ) : (
-                                    updateRecords.map(record => (
-                                        <div key={record.id} className="border rounded-xl p-4 hover:bg-gray-50">
-                                            <div className="flex justify-between items-start mb-3">
-                                                <div>
-                                                    <div className="font-medium text-gray-800">
-                                                        {record.date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                                    </div>
-                                                    <div className="text-sm text-gray-600">
-                                                        Berat: {record.weight} kg • Tinggi: {record.height} cm
+                                {/* Riwayat Pengukuran */}
+                                <div className="border-t pt-4 mt-4">
+                                    <h3 className="font-medium text-gray-700 mb-3">Riwayat Pengukuran</h3>
+                                    {recordsLoading ? (
+                                        <div className="text-center py-4 text-gray-500">Memuat riwayat...</div>
+                                    ) : growthRecords.length === 0 ? (
+                                        <div className="text-center py-4 text-gray-500">
+                                            Belum ada data pengukuran.
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {growthRecords.map(record => (
+                                                <div key={record.id} className="border rounded-xl p-4 hover:bg-gray-50">
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <div className="font-medium text-gray-800">
+                                                                {record.date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                                            </div>
+                                                            <div className="text-sm text-gray-600 mt-1">
+                                                                Berat: {record.weight} kg • Tinggi: {record.height} cm
+                                                            </div>
+                                                            {record.notes && (
+                                                                <div className="text-xs text-gray-500 mt-2 italic">
+                                                                    "{record.notes}"
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <button className="text-blue-500 text-sm hover:text-blue-600">
+                                                                Edit
+                                                            </button>
+                                                            <button className="text-red-500 text-sm hover:text-red-600">
+                                                                Hapus
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <button className="text-blue-500 text-sm font-medium hover:text-blue-600">
-                                                    Edit
-                                                </button>
-                                            </div>
-                                            {record.notes && (
-                                                <div className="text-sm text-gray-500 mt-2">Catatan: {record.notes}</div>
-                                            )}
+                                            ))}
                                         </div>
-                                    ))
-                                )}
-                            </div>
+                                    )}
+                                </div>
+                            </>
                         )}
                     </div>
                 )}
