@@ -4,13 +4,15 @@ import { initializeApp } from "firebase/app";
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
+// src/lib/firebase/config.ts
+
 export const firebaseConfig = {
-    apiKey: "AIzaSyC_dTnDHnL11k-es1Cmc0cA0ITA8hh4wtM",
-    authDomain: "gizi-monitoring.firebaseapp.com",
-    projectId: "gizi-monitoring",
-    storageBucket: "gizi-monitoring.firebasestorage.app",
-    messagingSenderId: "278080247060",
-    appId: "1:278080247060:web:14bf1b8dcd7e7b28eede01"
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
 // Initialize Firebase
