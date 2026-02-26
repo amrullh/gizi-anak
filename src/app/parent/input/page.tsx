@@ -137,7 +137,7 @@ export default function InputPage() {
             <div className="bg-white p-1 rounded-2xl border border-gray-200 flex">
                 <button
                     onClick={() => setActiveTab('addChild')}
-                    className={`flex-1 py-3 rounded-xl text-sm font-medium transition ${activeTab === 'addChild'
+                    className={`flex-1 py-3 rounded-xl text-sm font-medium transition ${activeTab ===   'addChild'
                         ? 'bg-pink-500 text-white shadow-md'
                         : 'text-gray-600 hover:bg-gray-100'
                         }`}
