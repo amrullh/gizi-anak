@@ -8,6 +8,7 @@ import { useChildren } from '@/hooks/useChildren'
 import { useGrowthRecords } from '@/hooks/useGrowthRecords'
 import { useAuth } from '@/context/AuthContext'
 import { useState, useEffect } from 'react'
+import { calculateNutritionalStatus } from '@/utils/nutrition'
 
 export default function ParentDashboard() {
     const { user } = useAuth()
@@ -21,6 +22,13 @@ export default function ParentDashboard() {
             setSelectedChildId(children[0].id)
         }
     }, [children, selectedChildId])
+
+    const getAgeInMonths = (birthDate: Date) => {
+        const now = new Date()
+        const diffMs = now.getTime() - birthDate.getTime()
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+        return Math.floor(diffDays / 30.44) // rata-rata hari per bulan
+    }
 
     const getAgeString = (birthDate: Date) => {
         const now = new Date()
@@ -43,15 +51,48 @@ export default function ParentDashboard() {
             height: record.height,
         }))
 
-    const getNutritionalStatus = () => {
-        if (records.length === 0) return 'Belum Ada Data'
-        const sorted = [...records].sort((a, b) => b.date.getTime() - a.date.getTime())
+    // Fungsi untuk mendapatkan status gizi terbaru untuk seorang anak
+    const getChildNutritionalStatus = (childId: string) => {
+        const childRecords = records.filter(r => r.childId === childId)
+        if (childRecords.length === 0) return { status: 'Belum Ada Data', color: 'bg-gray-100 text-gray-800' }
+
+        const sorted = [...childRecords].sort((a, b) => b.date.getTime() - a.date.getTime())
         const latest = sorted[0]
-        if (latest.nutritionalStatus) return latest.nutritionalStatus
-        // Fallback sederhana (nanti bisa pakai z-score)
-        if (latest.weight < 5) return 'Kurang'
-        if (latest.weight > 20) return 'Lebih'
-        return 'Normal'
+
+        if (latest.nutritionalStatus) {
+            // Jika sudah ada status dari server, gunakan itu
+            const status = latest.nutritionalStatus
+            const colorMap: Record<string, string> = {
+                'Gizi Buruk': 'bg-red-100 text-red-800',
+                'Gizi Kurang': 'bg-amber-100 text-amber-800',
+                'Gizi Baik': 'bg-emerald-100 text-emerald-800',
+                'Gizi Lebih': 'bg-blue-100 text-blue-800',
+                'Obesitas': 'bg-red-100 text-red-800',
+            }
+            return { status, color: colorMap[status] || 'bg-gray-100 text-gray-800' }
+        }
+
+        // Hitung manual
+        const child = children.find(c => c.id === childId)
+        if (!child) return { status: 'Tidak Diketahui', color: 'bg-gray-100 text-gray-800' }
+
+        const ageMonths = getAgeInMonths(child.birthDate)
+        const result = calculateNutritionalStatus(ageMonths, child.gender, latest.weight, latest.height)
+        // Konversi warna dari utils ke class Tailwind
+        const colorMap: Record<string, string> = {
+            'Gizi Kurang': 'bg-amber-100 text-amber-800',
+            'Gizi Baik': 'bg-emerald-100 text-emerald-800',
+            'Gizi Lebih': 'bg-blue-100 text-blue-800',
+            'Obesitas': 'bg-red-100 text-red-800',
+        }
+        return { status: result.status, color: colorMap[result.status] || 'bg-gray-100 text-gray-800' }
+    }
+
+    // Status gizi untuk card overview (ambil dari anak terpilih atau semua?)
+    // Kita ambil dari anak terpilih, atau jika tidak ada, tampilkan default
+    const getOverallStatus = () => {
+        if (!selectedChild) return { status: 'Pilih Anak', color: 'bg-gray-100 text-gray-800' }
+        return getChildNutritionalStatus(selectedChild.id)
     }
 
     const getLastUpdate = (childId: string) => {
@@ -73,17 +114,7 @@ export default function ParentDashboard() {
     }
 
     const displayName = user?.name || user?.email || 'Pengguna'
-    const nutritionalStatus = getNutritionalStatus()
-
-    const statusColorMap: Record<string, string> = {
-        'Normal': 'bg-emerald-100 text-emerald-800',
-        'Baik': 'bg-emerald-100 text-emerald-800',
-        'Kurang': 'bg-amber-100 text-amber-800',
-        'Lebih': 'bg-blue-100 text-blue-800',
-        'Buruk': 'bg-red-100 text-red-800',
-        'Belum Ada Data': 'bg-gray-100 text-gray-800',
-    }
-    const statusColor = statusColorMap[nutritionalStatus] || 'bg-gray-100 text-gray-800'
+    const overallStatus = getOverallStatus()
 
     return (
         <div className="space-y-6">
@@ -109,8 +140,8 @@ export default function ParentDashboard() {
                     <div className="flex justify-between items-center">
                         <div>
                             <p className="text-xs md:text-sm text-emerald-600 font-medium">Status Gizi</p>
-                            <p className={`text-2xl md:text-3xl font-bold ${nutritionalStatus === 'Normal' ? 'text-emerald-600' : ''}`}>
-                                {nutritionalStatus}
+                            <p className={`text-2xl md:text-3xl font-bold ${overallStatus.color.includes('emerald') ? 'text-emerald-600' : ''}`}>
+                                {overallStatus.status}
                             </p>
                         </div>
                         <FaHeartbeat className="text-emerald-500 text-2xl md:text-3xl" />
@@ -134,19 +165,7 @@ export default function ParentDashboard() {
                 ) : (
                     <div className="space-y-4">
                         {children.map(child => {
-                            const childRecords = records.filter(r => r.childId === child.id)
-                            const childStatus = childRecords.length > 0
-                                ? (childRecords.sort((a, b) => b.date.getTime() - a.date.getTime())[0].nutritionalStatus || 'Normal')
-                                : 'Belum Ada Data'
-                            const statusClassMap: Record<string, string> = {
-                                'Normal': 'bg-emerald-100 text-emerald-800',
-                                'Baik': 'bg-emerald-100 text-emerald-800',
-                                'Kurang': 'bg-amber-100 text-amber-800',
-                                'Lebih': 'bg-blue-100 text-blue-800',
-                                'Buruk': 'bg-red-100 text-red-800',
-                                'Belum Ada Data': 'bg-gray-100 text-gray-800',
-                            }
-                            const statusClass = statusClassMap[childStatus] || 'bg-gray-100 text-gray-800'
+                            const { status, color } = getChildNutritionalStatus(child.id)
 
                             return (
                                 <div
@@ -162,8 +181,8 @@ export default function ParentDashboard() {
                                             <h3 className="font-semibold text-gray-800 text-base md:text-lg">{child.name}</h3>
                                             <p className="text-sm text-gray-600">{getAgeString(child.birthDate)}</p>
                                         </div>
-                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusClass}`}>
-                                            {childStatus}
+                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${color}`}>
+                                            {status}
                                         </span>
                                     </div>
                                     <div className="flex justify-between items-center mt-3 text-sm">
