@@ -31,7 +31,6 @@ export function usePregnancy() {
                     setPregnancy({
                         id: docSnap.id,
                         ...data,
-                        pemeriksaanTanggal: data.pemeriksaanTanggal?.toDate(),
                         hpht: data.hpht?.toDate(),
                         taksiranPersalinan: data.taksiranPersalinan?.toDate(),
                         createdAt: data.createdAt?.toDate(),
