@@ -18,7 +18,15 @@ interface User {
     role?: 'parent' | 'admin';
     phone?: string;
     address?: string;
-    isPregnant?: boolean; // <-- tambah
+    // Data ibu & gizi (wajib)
+    ttl?: string; // tempat, tanggal lahir
+    beratBadan?: number;
+    tinggiBadan?: number;
+    hb?: number;
+    age?: number;
+    lila?: number;
+    // Status kehamilan (opsional)
+    isPregnant?: boolean;
 }
 
 interface AuthContextType {
@@ -27,7 +35,7 @@ interface AuthContextType {
     login: (email: string, password: string) => Promise<void>;
     register: (email: string, password: string, name: string, role: string) => Promise<void>;
     logout: () => Promise<void>;
-    updateUser: (data: Partial<User>) => Promise<void>; // <-- fungsi untuk update
+    updateUser: (data: Partial<User>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -50,7 +58,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                             role: userData.role,
                             phone: userData.phone,
                             address: userData.address,
-                            isPregnant: userData.isPregnant, // <-- ambil
+                            ttl: userData.ttl,
+                            beratBadan: userData.beratBadan,
+                            tinggiBadan: userData.tinggiBadan,
+                            hb: userData.hb,
+                            lila: userData.lila,
+                            isPregnant: userData.isPregnant,
                         });
                     } else {
                         console.warn('Dokumen user tidak ditemukan di Firestore');
