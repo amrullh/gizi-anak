@@ -62,12 +62,12 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
                             <FaBell size={20} />
                             <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                         </button>
-                        <div className="flex items-center gap-2">
+                        <Link href="/parent/profile" className="flex items-center gap-2 hover:opacity-80 transition">
                             <span className="text-sm text-gray-700 hidden sm:inline">{user.name || user.email}</span>
                             <div className="w-8 h-8 bg-gradient-to-br from-pink-400 to-pink-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-sm">
                                 {initial}
                             </div>
-                        </div>
+                        </Link>
                     </div>
                 </div>
             </header>
