@@ -64,7 +64,7 @@ export default function InputPage() {
                     date: new Date(childForm.measurementDate),
                     weight: parseFloat(childForm.weight),
                     height: parseFloat(childForm.height),
-                    notes: childForm.notes || undefined,
+                    notes: childForm.notes || "-",
                 })
             }
 
@@ -108,7 +108,7 @@ export default function InputPage() {
                 date: new Date(growthForm.date),
                 weight: parseFloat(growthForm.weight),
                 height: parseFloat(growthForm.height),
-                notes: growthForm.notes || undefined,
+                notes: growthForm.notes || "-",
             })
             setGrowthForm({
                 date: new Date().toISOString().split('T')[0],
