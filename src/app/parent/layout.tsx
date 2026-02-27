@@ -4,20 +4,32 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { FaBook, FaChartBar, FaPlusCircle, FaUser, FaBell } from 'react-icons/fa'
 import { useAuth } from '@/context/AuthContext'
+import { usePregnancy } from '@/hooks/usePregnancy'
 import { useEffect } from 'react'
 
 export default function ParentLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
     const router = useRouter()
-    const { user, loading } = useAuth()
+    const { user, loading: authLoading } = useAuth()
+    const { pregnancy, loading: pregnancyLoading } = usePregnancy()
 
     useEffect(() => {
-        if (!loading && (!user || user.role !== 'parent')) {
+        if (!authLoading && user) {
+            if (user.role !== 'parent') {
+                router.push('/login')
+            } else if (!user.phone || !user.address) {
+                // Jika data profil belum lengkap
+                router.push('/parent/complete-profile')
+            } else if (!pregnancyLoading && !pregnancy) {
+                // Jika data kehamilan belum ada, redirect ke halaman pregnancy
+                router.push('/parent/pregnancy')
+            }
+        } else if (!authLoading && !user) {
             router.push('/login')
         }
-    }, [user, loading, router])
+    }, [user, authLoading, pregnancy, pregnancyLoading, router])
 
-    if (loading) {
+    if (authLoading || pregnancyLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
@@ -62,7 +74,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
                 {children}
             </main>
 
-            {/* BOTTOM NAVBAR - FIXED */}
+            {/* BOTTOM NAVBAR */}
             <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
                 <div className="max-w-5xl mx-auto px-6 py-2">
                     <div className="flex justify-between items-center relative">
@@ -79,8 +91,8 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
                             className="flex flex-col items-center -mt-8"
                         >
                             <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg ${pathname === '/parent/dashboard'
-                                    ? 'bg-gradient-to-r from-pink-500 to-orange-500 text-white'
-                                    : 'bg-gray-200 text-gray-600'
+                                ? 'bg-gradient-to-r from-pink-500 to-orange-500 text-white'
+                                : 'bg-gray-200 text-gray-600'
                                 }`}>
                                 <FaChartBar size={26} />
                             </div>
