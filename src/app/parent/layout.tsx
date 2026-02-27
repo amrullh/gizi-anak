@@ -20,8 +20,11 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
             } else if (!user.phone || !user.address) {
                 // Jika data profil belum lengkap
                 router.push('/parent/complete-profile')
-            } else if (!pregnancyLoading && !pregnancy) {
-                // Jika data kehamilan belum ada, redirect ke halaman pregnancy
+            } else if (user.isPregnant === true && !pregnancy) {
+                // Jika user hamil tapi data kehamilan belum ada, redirect
+                router.push('/parent/pregnancy')
+            } else if (user.isPregnant === undefined) {
+                // Jika isPregnant belum diset, arahkan ke halaman pregnancy untuk memilih
                 router.push('/parent/pregnancy')
             }
         } else if (!authLoading && !user) {
