@@ -4,15 +4,17 @@ import { FaChild, FaHeartbeat, FaArrowRight } from 'react-icons/fa'
 import Card from '@/components/ui/Card'
 import GrowthChart from '@/components/features/GrowthChart'
 import { useChildren } from '@/hooks/useChildren'
+import { useGrowthRecords } from '@/hooks/useGrowthRecords'
 import { useAuth } from '@/context/AuthContext'
 import { useState, useEffect } from 'react'
 
 export default function ParentDashboard() {
     const { user } = useAuth()
-    const { children, loading } = useChildren()
+    const { children, loading: childrenLoading } = useChildren()
     const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
+    const { records, loading: recordsLoading } = useGrowthRecords(selectedChildId || undefined)
 
-    
+    // Pilih anak pertama secara default ketika children sudah dimuat
     useEffect(() => {
         if (children.length > 0 && !selectedChildId) {
             setSelectedChildId(children[0].id)
@@ -33,7 +35,43 @@ export default function ParentDashboard() {
     // Dapatkan data anak terpilih
     const selectedChild = children.find(c => c.id === selectedChildId)
 
-    if (loading) {
+    // Siapkan data untuk grafik
+    const chartData = records
+        .sort((a, b) => a.date.getTime() - b.date.getTime())
+        .map(record => ({
+            month: record.date.toLocaleDateString('id-ID', { month: 'short' }),
+            weight: record.weight,
+            height: record.height,
+        }))
+
+    // Hitung status gizi keseluruhan (sementara ambil dari record terbaru jika ada)
+    const getNutritionalStatus = () => {
+        if (records.length === 0) return 'Belum Ada Data'
+        // Urutkan dari terbaru
+        const sorted = [...records].sort((a, b) => b.date.getTime() - a.date.getTime())
+        const latest = sorted[0]
+        // Di sini bisa pakai field nutritionalStatus jika ada, atau hitung sendiri
+        // Sementara kita asumsikan normal jika berat dan tinggi wajar
+        // Nanti bisa diganti dengan logika z-score
+        if (latest.nutritionalStatus) return latest.nutritionalStatus
+        // Fallback sederhana
+        if (latest.weight < 5) return 'Kurang'
+        if (latest.weight > 20) return 'Lebih'
+        return 'Normal'
+    }
+
+    // Dapatkan tanggal update terakhir untuk anak tertentu
+    const getLastUpdate = (childId: string) => {
+        const childRecords = records.filter(r => r.childId === childId)
+        if (childRecords.length === 0) return '-'
+        const latest = childRecords.sort((a, b) => b.date.getTime() - a.date.getTime())[0]
+        const diffDays = Math.floor((new Date().getTime() - latest.date.getTime()) / (1000 * 60 * 60 * 24))
+        if (diffDays === 0) return 'Hari ini'
+        if (diffDays === 1) return 'Kemarin'
+        return `${diffDays} hari lalu`
+    }
+
+    if (childrenLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
@@ -42,7 +80,18 @@ export default function ParentDashboard() {
     }
 
     const displayName = user?.name || user?.email || 'Pengguna'
-    const initial = displayName.charAt(0).toUpperCase()
+    const nutritionalStatus = getNutritionalStatus()
+
+    // Tentukan warna status gizi
+    const statusColorMap: Record<string, string> = {
+        'Normal': 'bg-emerald-100 text-emerald-800',
+        'Baik': 'bg-emerald-100 text-emerald-800',
+        'Kurang': 'bg-amber-100 text-amber-800',
+        'Lebih': 'bg-blue-100 text-blue-800',
+        'Buruk': 'bg-red-100 text-red-800',
+        'Belum Ada Data': 'bg-gray-100 text-gray-800',
+    }
+    const statusColor = statusColorMap[nutritionalStatus] || 'bg-gray-100 text-gray-800'
 
     return (
         <div className="space-y-6">
@@ -68,7 +117,9 @@ export default function ParentDashboard() {
                     <div className="flex justify-between items-center">
                         <div>
                             <p className="text-xs md:text-sm text-emerald-600 font-medium">Status Gizi</p>
-                            <p className="text-2xl md:text-3xl font-bold text-emerald-600">Baik</p>
+                            <p className={`text-2xl md:text-3xl font-bold ${nutritionalStatus === 'Normal' ? 'text-emerald-600' : ''}`}>
+                                {nutritionalStatus}
+                            </p>
                         </div>
                         <FaHeartbeat className="text-emerald-500 text-2xl md:text-3xl" />
                     </div>
@@ -90,35 +141,52 @@ export default function ParentDashboard() {
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {children.map(child => (
-                            <div
-                                key={child.id}
-                                className={`border rounded-xl p-4 transition cursor-pointer ${selectedChildId === child.id
+                        {children.map(child => {
+                            // Dapatkan status per anak (bisa pakai record terbaru anak ini)
+                            const childRecords = records.filter(r => r.childId === child.id)
+                            const childStatus = childRecords.length > 0
+                                ? (childRecords.sort((a, b) => b.date.getTime() - a.date.getTime())[0].nutritionalStatus || 'Normal')
+                                : 'Belum Ada Data'
+                            const statusClassMap: Record<string, string> = {
+                                'Normal': 'bg-emerald-100 text-emerald-800',
+                                'Baik': 'bg-emerald-100 text-emerald-800',
+                                'Kurang': 'bg-amber-100 text-amber-800',
+                                'Lebih': 'bg-blue-100 text-blue-800',
+                                'Buruk': 'bg-red-100 text-red-800',
+                                'Belum Ada Data': 'bg-gray-100 text-gray-800',
+                            }
+                            const statusClass = statusClassMap[childStatus] || 'bg-gray-100 text-gray-800'
+
+                            return (
+                                <div
+                                    key={child.id}
+                                    className={`border rounded-xl p-4 transition cursor-pointer ${selectedChildId === child.id
                                         ? 'border-pink-500 bg-pink-50'
                                         : 'hover:border-pink-300'
-                                    }`}
-                                onClick={() => setSelectedChildId(child.id)}
-                            >
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <h3 className="font-semibold text-gray-800 text-base md:text-lg">{child.name}</h3>
-                                        <p className="text-sm text-gray-600">{getAgeString(child.birthDate)}</p>
+                                        }`}
+                                    onClick={() => setSelectedChildId(child.id)}
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="font-semibold text-gray-800 text-base md:text-lg">{child.name}</h3>
+                                            <p className="text-sm text-gray-600">{getAgeString(child.birthDate)}</p>
+                                        </div>
+                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusClass}`}>
+                                            {childStatus}
+                                        </span>
                                     </div>
-                                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                                        Gizi Baik
-                                    </span>
+                                    <div className="flex justify-between items-center mt-3 text-sm">
+                                        <span className="text-gray-500">Update: {getLastUpdate(child.id)}</span>
+                                        <button className="text-pink-500 font-medium text-sm">Detail →</button>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between items-center mt-3 text-sm">
-                                    <span className="text-gray-500">Update: -</span>
-                                    <button className="text-pink-500 font-medium text-sm">Detail →</button>
-                                </div>
-                            </div>
-                        ))}
+                            )
+                        })}
                     </div>
                 )}
             </Card>
 
-            {/* GROWTH CHART - akan diisi di langkah 2 */}
+            {/* GROWTH CHART */}
             <Card className="p-4 md:p-5">
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-lg md:text-xl font-semibold">Grafik Perkembangan</h2>
@@ -134,10 +202,18 @@ export default function ParentDashboard() {
                     </div>
                 </div>
 
-                {selectedChild ? (
-                    <p className="text-center text-gray-500 py-8">
-                        Data grafik akan ditampilkan di langkah berikutnya.
-                    </p>
+                {recordsLoading ? (
+                    <div className="h-48 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-pink-500"></div>
+                    </div>
+                ) : selectedChild ? (
+                    chartData.length > 0 ? (
+                        <GrowthChart data={chartData} type="area" height={250} />
+                    ) : (
+                        <p className="text-center text-gray-500 py-8">
+                            Belum ada data pengukuran untuk {selectedChild.name}.
+                        </p>
+                    )
                 ) : (
                     <p className="text-center text-gray-500 py-8">
                         Pilih anak untuk melihat grafik.
