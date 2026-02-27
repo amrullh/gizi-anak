@@ -16,6 +16,8 @@ interface User {
     email: string | null;
     name?: string;
     role?: 'parent' | 'admin';
+    phone?: string;      // <-- tambah
+    address?: string;    // <-- tambah
 }
 
 interface AuthContextType {
@@ -36,24 +38,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 try {
-                    // Ambil data tambahan dari Firestore
                     const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
                     if (userDoc.exists()) {
                         const userData = userDoc.data();
                         setUser({
                             uid: firebaseUser.uid,
                             email: firebaseUser.email,
-                            name: userData?.name,
-                            role: userData?.role,
+                            name: userData.name,
+                            role: userData.role,
+                            phone: userData.phone,       // <-- ambil dari Firestore
+                            address: userData.address,   // <-- ambil dari Firestore
                         });
                     } else {
-                        // Dokumen tidak ditemukan, mungkin user lama? Set user dengan data minimal
-                        console.warn('User document not found in Firestore for uid:', firebaseUser.uid);
+                        console.warn('Dokumen user tidak ditemukan di Firestore');
                         setUser({
                             uid: firebaseUser.uid,
                             email: firebaseUser.email,
                             name: firebaseUser.displayName || '',
-                            role: undefined, // atau default?
+                            role: undefined,
                         });
                     }
                 } catch (error) {
@@ -74,7 +76,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const register = async (email: string, password: string, name: string, role: string) => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        // Simpan data user ke Firestore
         await setDoc(doc(db, 'users', userCredential.user.uid), {
             name,
             email,
