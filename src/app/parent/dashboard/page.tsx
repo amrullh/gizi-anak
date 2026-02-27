@@ -1,6 +1,7 @@
 'use client'
 
 import { FaChild, FaHeartbeat, FaArrowRight } from 'react-icons/fa'
+import Link from 'next/link'
 import Card from '@/components/ui/Card'
 import GrowthChart from '@/components/features/GrowthChart'
 import { useChildren } from '@/hooks/useChildren'
@@ -21,7 +22,6 @@ export default function ParentDashboard() {
         }
     }, [children, selectedChildId])
 
-    // Helper untuk menghitung umur dalam format "X tahun Y bulan" dari birthDate
     const getAgeString = (birthDate: Date) => {
         const now = new Date()
         const diffMs = now.getTime() - birthDate.getTime()
@@ -32,35 +32,28 @@ export default function ParentDashboard() {
         return `${months} bulan`
     }
 
-    // Dapatkan data anak terpilih
     const selectedChild = children.find(c => c.id === selectedChildId)
 
     // Siapkan data untuk grafik
     const chartData = records
         .sort((a, b) => a.date.getTime() - b.date.getTime())
         .map(record => ({
-            month: record.date.toLocaleDateString('id-ID', { month: 'short' }),
+            month: record.date.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' }),
             weight: record.weight,
             height: record.height,
         }))
 
-    // Hitung status gizi keseluruhan (sementara ambil dari record terbaru jika ada)
     const getNutritionalStatus = () => {
         if (records.length === 0) return 'Belum Ada Data'
-        // Urutkan dari terbaru
         const sorted = [...records].sort((a, b) => b.date.getTime() - a.date.getTime())
         const latest = sorted[0]
-        // Di sini bisa pakai field nutritionalStatus jika ada, atau hitung sendiri
-        // Sementara kita asumsikan normal jika berat dan tinggi wajar
-        // Nanti bisa diganti dengan logika z-score
         if (latest.nutritionalStatus) return latest.nutritionalStatus
-        // Fallback sederhana
+        // Fallback sederhana (nanti bisa pakai z-score)
         if (latest.weight < 5) return 'Kurang'
         if (latest.weight > 20) return 'Lebih'
         return 'Normal'
     }
 
-    // Dapatkan tanggal update terakhir untuk anak tertentu
     const getLastUpdate = (childId: string) => {
         const childRecords = records.filter(r => r.childId === childId)
         if (childRecords.length === 0) return '-'
@@ -82,7 +75,6 @@ export default function ParentDashboard() {
     const displayName = user?.name || user?.email || 'Pengguna'
     const nutritionalStatus = getNutritionalStatus()
 
-    // Tentukan warna status gizi
     const statusColorMap: Record<string, string> = {
         'Normal': 'bg-emerald-100 text-emerald-800',
         'Baik': 'bg-emerald-100 text-emerald-800',
@@ -142,7 +134,6 @@ export default function ParentDashboard() {
                 ) : (
                     <div className="space-y-4">
                         {children.map(child => {
-                            // Dapatkan status per anak (bisa pakai record terbaru anak ini)
                             const childRecords = records.filter(r => r.childId === child.id)
                             const childStatus = childRecords.length > 0
                                 ? (childRecords.sort((a, b) => b.date.getTime() - a.date.getTime())[0].nutritionalStatus || 'Normal')
@@ -208,7 +199,18 @@ export default function ParentDashboard() {
                     </div>
                 ) : selectedChild ? (
                     chartData.length > 0 ? (
-                        <GrowthChart data={chartData} type="area" height={250} />
+                        <>
+                            <GrowthChart data={chartData} type="area" height={250} />
+                            <div className="flex justify-end mt-4">
+                                <Link
+                                    href={`/parent/growth-detail/${selectedChild.id}`}
+                                    className="text-pink-500 text-sm font-medium flex items-center gap-1 hover:text-pink-600"
+                                >
+                                    Lihat Detail Grafik
+                                    <FaArrowRight size={12} />
+                                </Link>
+                            </div>
+                        </>
                     ) : (
                         <p className="text-center text-gray-500 py-8">
                             Belum ada data pengukuran untuk {selectedChild.name}.
