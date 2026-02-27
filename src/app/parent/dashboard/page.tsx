@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Card from '@/components/ui/Card'
 import GrowthChart from '@/components/features/GrowthChart'
 import { useChildren } from '@/hooks/useChildren'
-import { useGrowthRecords } from '@/hooks/useGrowthRecords'
+import { useAllGrowthRecords } from '@/hooks/useAllGrowthRecords' // <-- hook baru
 import { useAuth } from '@/context/AuthContext'
 import { useState, useEffect } from 'react'
 import { calculateNutritionalStatus } from '@/utils/nutrition'
@@ -13,8 +13,9 @@ import { calculateNutritionalStatus } from '@/utils/nutrition'
 export default function ParentDashboard() {
     const { user } = useAuth()
     const { children, loading: childrenLoading } = useChildren()
+    const { records: allRecords, loading: recordsLoading } = useAllGrowthRecords() // semua data
+
     const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
-    const { records, loading: recordsLoading } = useGrowthRecords(selectedChildId || undefined)
 
     // Pilih anak pertama secara default ketika children sudah dimuat
     useEffect(() => {
@@ -27,7 +28,7 @@ export default function ParentDashboard() {
         const now = new Date()
         const diffMs = now.getTime() - birthDate.getTime()
         const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-        return Math.floor(diffDays / 30.44) // rata-rata hari per bulan
+        return Math.floor(diffDays / 30.44)
     }
 
     const getAgeString = (birthDate: Date) => {
@@ -42,8 +43,9 @@ export default function ParentDashboard() {
 
     const selectedChild = children.find(c => c.id === selectedChildId)
 
-    // Siapkan data untuk grafik
-    const chartData = records
+    // Siapkan data grafik untuk anak yang dipilih (dari allRecords)
+    const chartData = allRecords
+        .filter(r => r.childId === selectedChildId)
         .sort((a, b) => a.date.getTime() - b.date.getTime())
         .map(record => ({
             month: record.date.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' }),
@@ -53,14 +55,13 @@ export default function ParentDashboard() {
 
     // Fungsi untuk mendapatkan status gizi terbaru untuk seorang anak
     const getChildNutritionalStatus = (childId: string) => {
-        const childRecords = records.filter(r => r.childId === childId)
+        const childRecords = allRecords.filter(r => r.childId === childId)
         if (childRecords.length === 0) return { status: 'Belum Ada Data', color: 'bg-gray-100 text-gray-800' }
 
         const sorted = [...childRecords].sort((a, b) => b.date.getTime() - a.date.getTime())
         const latest = sorted[0]
 
         if (latest.nutritionalStatus) {
-            // Jika sudah ada status dari server, gunakan itu
             const status = latest.nutritionalStatus
             const colorMap: Record<string, string> = {
                 'Gizi Buruk': 'bg-red-100 text-red-800',
@@ -72,13 +73,11 @@ export default function ParentDashboard() {
             return { status, color: colorMap[status] || 'bg-gray-100 text-gray-800' }
         }
 
-        // Hitung manual
         const child = children.find(c => c.id === childId)
         if (!child) return { status: 'Tidak Diketahui', color: 'bg-gray-100 text-gray-800' }
 
         const ageMonths = getAgeInMonths(child.birthDate)
         const result = calculateNutritionalStatus(ageMonths, child.gender, latest.weight, latest.height)
-        // Konversi warna dari utils ke class Tailwind
         const colorMap: Record<string, string> = {
             'Gizi Kurang': 'bg-amber-100 text-amber-800',
             'Gizi Baik': 'bg-emerald-100 text-emerald-800',
@@ -88,15 +87,13 @@ export default function ParentDashboard() {
         return { status: result.status, color: colorMap[result.status] || 'bg-gray-100 text-gray-800' }
     }
 
-    // Status gizi untuk card overview (ambil dari anak terpilih atau semua?)
-    // Kita ambil dari anak terpilih, atau jika tidak ada, tampilkan default
     const getOverallStatus = () => {
         if (!selectedChild) return { status: 'Pilih Anak', color: 'bg-gray-100 text-gray-800' }
         return getChildNutritionalStatus(selectedChild.id)
     }
 
     const getLastUpdate = (childId: string) => {
-        const childRecords = records.filter(r => r.childId === childId)
+        const childRecords = allRecords.filter(r => r.childId === childId)
         if (childRecords.length === 0) return '-'
         const latest = childRecords.sort((a, b) => b.date.getTime() - a.date.getTime())[0]
         const diffDays = Math.floor((new Date().getTime() - latest.date.getTime()) / (1000 * 60 * 60 * 24))
@@ -105,7 +102,7 @@ export default function ParentDashboard() {
         return `${diffDays} hari lalu`
     }
 
-    if (childrenLoading) {
+    if (childrenLoading || recordsLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
@@ -212,11 +209,7 @@ export default function ParentDashboard() {
                     </div>
                 </div>
 
-                {recordsLoading ? (
-                    <div className="h-48 flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-pink-500"></div>
-                    </div>
-                ) : selectedChild ? (
+                {selectedChild ? (
                     chartData.length > 0 ? (
                         <>
                             <GrowthChart data={chartData} type="area" height={250} />
