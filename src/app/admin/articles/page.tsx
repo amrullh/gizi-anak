@@ -1,18 +1,41 @@
 'use client'
 
-import { useState } from 'react'
-import { FaPlus, FaEdit, FaTrash, FaEye, FaSearch, FaFilter } from 'react-icons/fa'
+import { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
+import { FaPlus, FaEdit, FaTrash, FaEye, FaSearch } from 'react-icons/fa'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
+import { useArticles } from '@/hooks/useArticles'
 
 export default function AdminArticlesPage() {
-    const [articles, setArticles] = useState([
-        { id: 1, title: 'MPASI untuk Bayi 6-8 Bulan', category: 'Nutrisi', status: 'published', views: 124, date: '15 Jan 2024' },
-        { id: 2, title: 'Jadwal Imunisasi Dasar Lengkap', category: 'Imunisasi', status: 'published', views: 89, date: '10 Jan 2024' },
-        { id: 3, title: 'Cegah Stunting Sejak Dini', category: 'Edukasi', status: 'draft', views: 0, date: '5 Jan 2024' },
-        { id: 4, title: 'Resep MPASI Bergizi', category: 'Resep', status: 'published', views: 56, date: '3 Jan 2024' },
-        { id: 5, title: 'Perkembangan Motorik Anak', category: 'Parenting', status: 'draft', views: 0, date: '1 Jan 2024' },
-    ])
+    const router = useRouter()
+    const { articles, loading, deleteArticle } = useArticles()
+    const [search, setSearch] = useState('')
+    const [categoryFilter, setCategoryFilter] = useState('all')
+    const [statusFilter, setStatusFilter] = useState('all')
+
+    const filteredArticles = useMemo(() => {
+        return articles.filter(article => {
+            const matchesSearch = article.title.toLowerCase().includes(search.toLowerCase())
+            const matchesCategory = categoryFilter === 'all' || article.category === categoryFilter
+            const matchesStatus = statusFilter === 'all' || article.status === statusFilter
+            return matchesSearch && matchesCategory && matchesStatus
+        })
+    }, [articles, search, categoryFilter, statusFilter])
+
+    const handleDelete = async (id: string) => {
+        if (confirm('Yakin ingin menghapus artikel ini?')) {
+            await deleteArticle(id)
+        }
+    }
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
+            </div>
+        )
+    }
 
     return (
         <div className="space-y-6">
@@ -22,7 +45,7 @@ export default function AdminArticlesPage() {
                     <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">Kelola Artikel</h1>
                     <p className="text-gray-600 mt-2">Buat dan kelola artikel edukasi kesehatan</p>
                 </div>
-                <Button>
+                <Button onClick={() => router.push('/admin/articles/new')}>
                     <FaPlus className="inline mr-2" />
                     Buat Artikel Baru
                 </Button>
@@ -35,21 +58,32 @@ export default function AdminArticlesPage() {
                     <input
                         type="text"
                         placeholder="Cari artikel..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
                         className="w-full pl-11 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:border-purple-400 focus:ring-2 focus:ring-purple-200 outline-none"
                     />
                 </div>
                 <div className="flex gap-2">
-                    <select className="px-4 py-3 bg-white border border-gray-300 rounded-xl focus:border-purple-400 outline-none">
-                        <option>Semua Kategori</option>
-                        <option>Nutrisi</option>
-                        <option>Imunisasi</option>
-                        <option>Edukasi</option>
-                        <option>Resep</option>
+                    <select
+                        value={categoryFilter}
+                        onChange={(e) => setCategoryFilter(e.target.value)}
+                        className="px-4 py-3 bg-white border border-gray-300 rounded-xl focus:border-purple-400 outline-none"
+                    >
+                        <option value="all">Semua Kategori</option>
+                        <option value="Nutrisi">Nutrisi</option>
+                        <option value="Imunisasi">Imunisasi</option>
+                        <option value="Edukasi">Edukasi</option>
+                        <option value="Resep">Resep</option>
+                        <option value="Parenting">Parenting</option>
                     </select>
-                    <select className="px-4 py-3 bg-white border border-gray-300 rounded-xl focus:border-purple-400 outline-none">
-                        <option>Semua Status</option>
-                        <option>Published</option>
-                        <option>Draft</option>
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="px-4 py-3 bg-white border border-gray-300 rounded-xl focus:border-purple-400 outline-none"
+                    >
+                        <option value="all">Semua Status</option>
+                        <option value="published">Published</option>
+                        <option value="draft">Draft</option>
                     </select>
                 </div>
             </div>
@@ -69,7 +103,7 @@ export default function AdminArticlesPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {articles.map((article) => (
+                            {filteredArticles.map((article) => (
                                 <tr key={article.id} className="border-b hover:bg-gray-50 transition">
                                     <td className="p-4 font-medium text-gray-800">{article.title}</td>
                                     <td className="p-4">
@@ -79,23 +113,36 @@ export default function AdminArticlesPage() {
                                     </td>
                                     <td className="p-4">
                                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${article.status === 'published'
-                                                ? 'bg-emerald-100 text-emerald-800'
-                                                : 'bg-amber-100 text-amber-800'
+                                            ? 'bg-emerald-100 text-emerald-800'
+                                            : 'bg-amber-100 text-amber-800'
                                             }`}>
                                             {article.status === 'published' ? 'Published' : 'Draft'}
                                         </span>
                                     </td>
                                     <td className="p-4 text-gray-600">{article.views}</td>
-                                    <td className="p-4 text-gray-600">{article.date}</td>
+                                    <td className="p-4 text-gray-600">
+                                        {article.createdAt?.toLocaleDateString('id-ID')}
+                                    </td>
                                     <td className="p-4">
                                         <div className="flex items-center gap-3">
-                                            <button className="text-blue-500 hover:text-blue-700 transition" title="Edit">
+                                            <button
+                                                onClick={() => router.push(`/admin/articles/edit/${article.id}`)}
+                                                className="text-blue-500 hover:text-blue-700 transition"
+                                                title="Edit"
+                                            >
                                                 <FaEdit size={16} />
                                             </button>
-                                            <button className="text-green-500 hover:text-green-700 transition" title="Preview">
+                                            <button
+                                                className="text-green-500 hover:text-green-700 transition"
+                                                title="Preview"
+                                            >
                                                 <FaEye size={16} />
                                             </button>
-                                            <button className="text-red-500 hover:text-red-700 transition" title="Delete">
+                                            <button
+                                                onClick={() => handleDelete(article.id)}
+                                                className="text-red-500 hover:text-red-700 transition"
+                                                title="Delete"
+                                            >
                                                 <FaTrash size={16} />
                                             </button>
                                         </div>
@@ -109,36 +156,34 @@ export default function AdminArticlesPage() {
                 {/* PAGINATION */}
                 <div className="flex flex-col sm:flex-row justify-between items-center p-4 border-t">
                     <div className="text-sm text-gray-600 mb-4 sm:mb-0">
-                        Menampilkan 1-5 dari 12 artikel
+                        Menampilkan 1-{filteredArticles.length} dari {articles.length} artikel
                     </div>
-                    <div className="flex gap-2">
-                        <button className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50">
-                            ←
-                        </button>
-                        <button className="w-10 h-10 flex items-center justify-center rounded-lg bg-purple-500 text-white">1</button>
-                        <button className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50">2</button>
-                        <button className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50">3</button>
-                        <button className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50">→</button>
-                    </div>
+                    {/* Sederhanakan dulu tanpa pagination kompleks */}
                 </div>
             </Card>
 
             {/* STATS */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-white p-4 rounded-xl border border-gray-200">
-                    <div className="text-2xl font-bold text-gray-800">12</div>
+                    <div className="text-2xl font-bold text-gray-800">{articles.length}</div>
                     <div className="text-sm text-gray-600">Total Artikel</div>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-gray-200">
-                    <div className="text-2xl font-bold text-emerald-600">9</div>
+                    <div className="text-2xl font-bold text-emerald-600">
+                        {articles.filter(a => a.status === 'published').length}
+                    </div>
                     <div className="text-sm text-gray-600">Published</div>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-gray-200">
-                    <div className="text-2xl font-bold text-amber-600">3</div>
+                    <div className="text-2xl font-bold text-amber-600">
+                        {articles.filter(a => a.status === 'draft').length}
+                    </div>
                     <div className="text-sm text-gray-600">Draft</div>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-gray-200">
-                    <div className="text-2xl font-bold text-blue-600">269</div>
+                    <div className="text-2xl font-bold text-blue-600">
+                        {articles.reduce((acc, a) => acc + a.views, 0)}
+                    </div>
                     <div className="text-sm text-gray-600">Total Views</div>
                 </div>
             </div>
