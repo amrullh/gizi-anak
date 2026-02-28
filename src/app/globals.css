@@ -1,7 +1,6 @@
 @import "tailwindcss";
 
 @theme {
-
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));
@@ -57,14 +56,12 @@
 
   * {
     @apply border-border;
-
   }
 
   body {
     @apply bg-background text-foreground;
   }
 }
-
 
 @layer components {
   .glass-card {
@@ -73,6 +70,60 @@
 
   .btn-primary {
     @apply bg-gradient-to-r from-pink-500 to-orange-500 text-white py-3 px-6 rounded-full transition-all;
+  }
+
+  /* --- Perbaikan Konten Artikel agar Scalable & Video Muncul --- */
+
+  .article-content {
+    @apply break-words;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+
+  /* Fix: Video YouTube Iframe agar muncul dan tidak terpotong di HP */
+  .article-content iframe {
+    width: 100% !important;
+    aspect-ratio: 16 / 9 !important;
+    height: auto !important;
+    @apply rounded-xl my-6 shadow-md border-0;
+    display: block;
+  }
+
+  /* Mengatasi pembungkus video dari Quill yang seringkali merusak layout */
+  .article-content .ql-video {
+    width: 100% !important;
+    aspect-ratio: 16 / 9 !important;
+    @apply rounded-xl my-6;
+  }
+
+  .video-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    margin: 1.5rem 0;
+  }
+
+  .video-wrapper iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 0.75rem;
+  }
+
+  /* Mencegah Gambar Meluap di HP */
+  .article-content img {
+    @apply max-w-full h-auto rounded-xl shadow-sm my-4;
+    display: block;
+  }
+
+  /* Memperbaiki Spasi Daftar agar tidak menempel ke pinggir di Mobile */
+  .article-content ul,
+  .article-content ol {
+    @apply pl-6 my-4 list-outside;
+  }
+
+  .article-content li {
+    @apply mb-2;
   }
 }
 
