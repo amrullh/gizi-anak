@@ -13,18 +13,13 @@ export default function InputPage() {
     const [activeTab, setActiveTab] = useState<TabType>('addChild')
     const { children, loading, addChild } = useChildren()
 
-    // State untuk form tambah anak + pengukuran pertama
+    // State untuk form tambah anak (tanpa pengukuran pertama)
     const [childForm, setChildForm] = useState({
         name: '',
         birthDate: '',
         gender: 'male',
         birthWeight: '',
         birthHeight: '',
-        // pengukuran pertama
-        measurementDate: new Date().toISOString().split('T')[0],
-        weight: '',
-        height: '',
-        notes: ''
     })
     const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -48,25 +43,14 @@ export default function InputPage() {
         e.preventDefault()
         setIsSubmitting(true)
         try {
-            // 1. Buat child
-            const newChild = await addChild({
+            // Hanya tambah child, tanpa growth record
+            await addChild({
                 name: childForm.name,
                 birthDate: new Date(childForm.birthDate),
                 gender: childForm.gender as 'male' | 'female',
                 birthWeight: childForm.birthWeight ? parseFloat(childForm.birthWeight) : undefined,
                 birthHeight: childForm.birthHeight ? parseFloat(childForm.birthHeight) : undefined,
             })
-
-            // 2. Jika ada data pengukuran pertama, buat growth record
-            if (childForm.weight && childForm.height) {
-                await addRecord({
-                    childId: newChild.id,
-                    date: new Date(childForm.measurementDate),
-                    weight: parseFloat(childForm.weight),
-                    height: parseFloat(childForm.height),
-                    notes: childForm.notes || "-",
-                })
-            }
 
             // Reset form
             setChildForm({
@@ -75,13 +59,9 @@ export default function InputPage() {
                 gender: 'male',
                 birthWeight: '',
                 birthHeight: '',
-                measurementDate: new Date().toISOString().split('T')[0],
-                weight: '',
-                height: '',
-                notes: ''
             })
 
-            alert('Data anak dan pengukuran pertama berhasil disimpan!')
+            alert('Data anak berhasil disimpan!')
         } catch (error) {
             console.error(error)
             alert('Gagal menyimpan data')
@@ -137,7 +117,7 @@ export default function InputPage() {
             <div className="bg-white p-1 rounded-2xl border border-gray-200 flex">
                 <button
                     onClick={() => setActiveTab('addChild')}
-                    className={`flex-1 py-3 rounded-xl text-sm font-medium transition ${activeTab ===   'addChild'
+                    className={`flex-1 py-3 rounded-xl text-sm font-medium transition ${activeTab === 'addChild'
                         ? 'bg-pink-500 text-white shadow-md'
                         : 'text-gray-600 hover:bg-gray-100'
                         }`}
@@ -228,63 +208,6 @@ export default function InputPage() {
                                         value={childForm.birthHeight}
                                         onChange={handleChildFormChange}
                                         placeholder="48"
-                                        className="input-field"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Pengukuran Pertama */}
-                            <div className="border-t pt-4 mt-4">
-                                <h3 className="font-medium text-gray-700 mb-3">Pengukuran Pertama (opsional)</h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium mb-2">
-                                            <FaCalendarAlt className="inline mr-2" /> Tanggal
-                                        </label>
-                                        <input
-                                            type="date"
-                                            name="measurementDate"
-                                            value={childForm.measurementDate}
-                                            onChange={handleChildFormChange}
-                                            className="input-field"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-2">
-                                            <FaWeight className="inline mr-2" /> Berat (kg)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="weight"
-                                            value={childForm.weight}
-                                            onChange={handleChildFormChange}
-                                            step="0.1"
-                                            placeholder="11.5"
-                                            className="input-field"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-2">
-                                            <FaRulerVertical className="inline mr-2" /> Tinggi (cm)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="height"
-                                            value={childForm.height}
-                                            onChange={handleChildFormChange}
-                                            placeholder="80"
-                                            className="input-field"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="mt-3">
-                                    <label className="block text-sm font-medium mb-2">Catatan</label>
-                                    <textarea
-                                        name="notes"
-                                        rows={2}
-                                        value={childForm.notes}
-                                        onChange={handleChildFormChange}
-                                        placeholder="Contoh: Kondisi saat pengukuran pertama"
                                         className="input-field"
                                     />
                                 </div>

@@ -1,12 +1,20 @@
+export interface MonthlyRecord {
+    tanggal: Date;
+    beratBadan: number;
+    tinggiBadan: number;
+    hb: number;
+    lila: number;
+    keluhan?: string;
+}
+
 export interface PregnancyData {
     id: string;
     userId: string;
-    isPregnant: boolean; // tambah field ini
+    isPregnant: boolean;
     pemeriksaanTanggal: Date;
     nama: string;
     umur: number;
     ttl?: string;
-    // field kehamilan hanya relevan jika isPregnant true
     kehamilanKe?: number;
     jumlahAnakHidup?: number;
     pernahAbortus?: boolean;
@@ -17,11 +25,13 @@ export interface PregnancyData {
     keluhanTrimester1?: string;
     keluhanTrimester2?: string;
     keluhanTrimester3?: string;
-    // asesmen gizi tetap ada
     beratBadan: number;
     tinggiBadan: number;
     hb?: number;
     lila?: number;
+    // Fitur Baru
+    pillProgress: number; // 0 sampai 90
+    monthlyRecords?: MonthlyRecord[];
     createdAt: Date;
     updatedAt: Date;
 }
