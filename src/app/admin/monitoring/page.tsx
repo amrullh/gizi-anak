@@ -1,28 +1,68 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { FaSearch, FaDownload, FaEye, FaExclamationTriangle } from 'react-icons/fa'
+import {
+    FaSearch,
+    FaDownload,
+    FaEye,
+    FaExclamationTriangle,
+    FaTimes,
+    FaBaby,
+    FaWeight,
+    FaRulerVertical,
+    FaChartLine // Import yang tadi ketinggalan
+} from 'react-icons/fa'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
-import { useMonitoringData } from '@/hooks/useMonitoringData';
+import { useMonitoringData, MonitoringChild } from '@/hooks/useMonitoringData';
 import { calculateNutritionalStatus } from '@/utils/nutrition';
+import GrowthChart from '@/components/features/GrowthChart'
+import { useGrowthRecords } from '@/hooks/useGrowthRecords'
 
 export default function MonitoringPage() {
     const { loading, children } = useMonitoringData();
     const [selectedStatus, setSelectedStatus] = useState('all')
     const [searchQuery, setSearchQuery] = useState('')
 
-    // Pengelompokan status untuk filtering UI
+    // State untuk Modal Detail
+    const [selectedChild, setSelectedChild] = useState<MonitoringChild | null>(null);
+
+    // Fungsi Hitung Usia Detail
+    const getDetailedAge = (birthDateStr: any) => {
+        if (!birthDateStr) return '-';
+        const birthDate = birthDateStr?.toDate ? birthDateStr.toDate() : new Date(birthDateStr);
+        const now = new Date();
+
+        let years = now.getFullYear() - birthDate.getFullYear();
+        let months = now.getMonth() - birthDate.getMonth();
+        let days = now.getDate() - birthDate.getDate();
+
+        if (days < 0) {
+            months--;
+            const lastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+            days += lastMonth.getDate();
+        }
+        if (months < 0) {
+            years--;
+            months += 12;
+        }
+
+        const partYear = years > 0 ? `${years} thn ` : '';
+        const partMonth = months > 0 ? `${months} bln ` : '';
+        const partDay = days > 0 ? `${days} hr` : '';
+
+        return (partYear + partMonth + partDay).trim() || 'Baru lahir';
+    };
+
     const getStatusGroup = (status: string) => {
         if (status.includes('Normal') || status.includes('Baik')) return 'good';
         if (status.includes('Kurang') || status.includes('Lebih')) return 'warning';
-        if (status.includes('Obesitas')) return 'danger';
+        if (status.includes('Obesitas') || status.includes('Buruk')) return 'danger';
         return 'none';
     };
 
     const filteredData = useMemo(() => {
         return children.filter(child => {
-            // Gunakan weightVal & heightVal agar kalkulasi akurat
             const nutrition = calculateNutritionalStatus(
                 child.ageInMonths,
                 child.gender as 'male' | 'female',
@@ -41,12 +81,13 @@ export default function MonitoringPage() {
 
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-purple-500"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
         </div>
     );
 
     return (
         <div className="space-y-6">
+            {/* Header, Filter, dan Tabel tetap sama seperti sebelumnya... */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Monitoring Data Anak</h1>
@@ -55,7 +96,6 @@ export default function MonitoringPage() {
                 <Button className="rounded-full shadow-md"><FaDownload className="mr-2" /> Export Data</Button>
             </div>
 
-            {/* Filter Controls */}
             <div className="flex gap-3">
                 <div className="flex-1 relative">
                     <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -77,16 +117,15 @@ export default function MonitoringPage() {
                 </select>
             </div>
 
-            {/* Tabel Monitoring */}
             <Card className="overflow-hidden border-none shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
                         <thead className="bg-gray-50 border-b text-gray-500 font-bold uppercase text-[10px]">
                             <tr>
                                 <th className="p-4">Anak</th>
-                                <th className="p-4">Keluarga</th>
+                                <th className="p-4">Keluarga & Usia</th>
                                 <th className="p-4">Status Gizi</th>
-                                <th className="p-4">Metrik (BB | TB)</th>
+                                <th className="p-4">Metrik Terakhir</th>
                                 <th className="p-4">Update</th>
                                 <th className="p-4 text-center">Aksi</th>
                             </tr>
@@ -107,8 +146,8 @@ export default function MonitoringPage() {
                                             <div className="text-[10px] text-gray-400 uppercase">{child.gender === 'male' ? 'Laki-laki' : 'Perempuan'}</div>
                                         </td>
                                         <td className="p-4">
-                                            <div className="text-gray-700">{child.age || `${child.ageInMonths} bln`}</div>
-                                            <div className="text-[11px] text-gray-400">{child.parentName}</div>
+                                            <div className="text-gray-700 font-medium">{getDetailedAge(child.birthDate)}</div>
+                                            <div className="text-[11px] text-gray-400">Ortu: {child.parentName}</div>
                                         </td>
                                         <td className="p-4">
                                             <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border 
@@ -125,14 +164,12 @@ export default function MonitoringPage() {
                                         </td>
                                         <td className="p-4 text-xs text-gray-500">
                                             {child.lastUpdate}
-                                            {getStatusGroup(nutrition.status) === 'danger' && child.weightVal > 0 && (
-                                                <div className="flex items-center text-red-500 font-bold animate-pulse mt-1">
-                                                    <FaExclamationTriangle className="mr-1" size={10} /> PERHATIAN
-                                                </div>
-                                            )}
                                         </td>
                                         <td className="p-4 text-center">
-                                            <button className="text-purple-600 hover:bg-purple-50 p-2 rounded-full transition">
+                                            <button
+                                                onClick={() => setSelectedChild(child)}
+                                                className="text-purple-600 hover:bg-purple-50 p-2 rounded-full transition"
+                                            >
                                                 <FaEye size={16} />
                                             </button>
                                         </td>
@@ -141,6 +178,92 @@ export default function MonitoringPage() {
                             })}
                         </tbody>
                     </table>
+                </div>
+            </Card>
+
+            {/* MODAL DETAIL */}
+            {selectedChild && (
+                <ChildDetailModal
+                    child={selectedChild}
+                    onClose={() => setSelectedChild(null)}
+                    detailedAge={getDetailedAge(selectedChild.birthDate)}
+                />
+            )}
+        </div>
+    );
+}
+
+// Sub-Komponen Modal (Pastikan FaChartLine digunakan di sini)
+function ChildDetailModal({ child, onClose, detailedAge }: { child: MonitoringChild, onClose: () => void, detailedAge: string }) {
+    const { records, loading } = useGrowthRecords(child.id);
+
+    const chartData = useMemo(() => {
+        return [...records]
+            .sort((a, b) => a.date.getTime() - b.date.getTime())
+            .map(r => ({
+                month: r.date.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' }),
+                weight: r.weight,
+                height: r.height
+            }));
+    }, [records]);
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto relative animate-in zoom-in duration-200 p-6">
+                <button
+                    onClick={onClose}
+                    className="absolute right-4 top-4 p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+                >
+                    <FaTimes size={20} />
+                </button>
+
+                <div className="space-y-6">
+                    <div className="flex items-center gap-4 border-b pb-4">
+                        <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center text-purple-600">
+                            <FaBaby size={32} />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-800">{child.name}</h2>
+                            <p className="text-gray-500 font-medium">{detailedAge} • {child.gender === 'male' ? 'Laki-laki' : 'Perempuan'}</p>
+                        </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-4">
+                        <Card className="bg-blue-50 border-blue-100 p-4">
+                            <p className="text-xs text-blue-600 font-bold uppercase mb-1">Orang Tua</p>
+                            <p className="text-lg font-bold text-blue-900">{child.parentName}</p>
+                        </Card>
+                        <Card className="bg-pink-50 border-pink-100 p-4">
+                            <p className="text-xs text-pink-600 font-bold uppercase mb-1">Berat Terakhir</p>
+                            <p className="text-lg font-bold text-pink-900 flex items-center gap-2">
+                                <FaWeight /> {child.weightVal} kg
+                            </p>
+                        </Card>
+                        <Card className="bg-emerald-50 border-emerald-100 p-4">
+                            <p className="text-xs text-emerald-600 font-bold uppercase mb-1">Tinggi Terakhir</p>
+                            <p className="text-lg font-bold text-emerald-900 flex items-center gap-2">
+                                <FaRulerVertical /> {child.heightVal} cm
+                            </p>
+                        </Card>
+                    </div>
+
+                    {/* Bagian Grafik dengan FaChartLine */}
+                    <div className="space-y-3">
+                        <h3 className="font-bold text-gray-700 flex items-center gap-2">
+                            <FaChartLine className="text-purple-500" /> Grafik Pertumbuhan
+                        </h3>
+                        <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                            {chartData.length > 0 ? (
+                                <GrowthChart data={chartData} height={300} type="area" />
+                            ) : (
+                                <div className="h-[300px] flex items-center justify-center text-gray-400 italic">
+                                    Belum ada data pertumbuhan untuk dibuat grafik
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Histori Tabel... */}
                 </div>
             </Card>
         </div>
