@@ -12,7 +12,9 @@ import {
     FaTimes,
     FaUser,
     FaBell,
-    FaCog
+    FaCog,
+    FaPlus,
+    FaVenusMars
 } from 'react-icons/fa'
 import { useAuth } from '@/context/AuthContext'
 
@@ -44,6 +46,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { href: '/admin/dashboard', icon: FaHome, label: 'Dashboard' },
         { href: '/admin/articles', icon: FaNewspaper, label: 'Kelola Artikel' },
         { href: '/admin/monitoring', icon: FaEye, label: 'Monitoring' },
+        { href: '/admin/input', icon: FaPlus, label: 'Input Data' },
+        { href: '/admin/pregnancy', icon: FaVenusMars, label: 'Data Ibu Hamil' },
         { href: '/admin/reports', icon: FaChartBar, label: 'Laporan' },
     ]
 
@@ -97,8 +101,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                     href={item.href}
                                     onClick={() => setSidebarOpen(false)}
                                     className={`flex items-center gap-3 px-4 py-3 rounded-xl mb-2 transition-all duration-200 ${isActive
-                                            ? 'bg-purple-600 text-white shadow-lg shadow-purple-100'
-                                            : 'text-gray-600 hover:bg-gray-100'
+                                        ? 'bg-purple-600 text-white shadow-lg shadow-purple-100'
+                                        : 'text-gray-600 hover:bg-gray-100'
                                         }`}
                                 >
                                     <item.icon size={18} />
