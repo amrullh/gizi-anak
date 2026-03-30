@@ -6,78 +6,74 @@ import autoTable from 'jspdf-autotable';
 export interface ReportData {
     type: 'monthly' | 'yearly' | 'custom';
     period: string;
-    startDate?: Date;
-    endDate?: Date;
     stats: {
         totalChildren: number;
         totalParents: number;
-        totalArticles: number;
         goodNutrition: number;
         warningNutrition: number;
         badNutrition: number;
-        childrenByRegion: { region: string; count: number }[];
+        childrenList: any[]; // Data detail anak
     };
-}
-
-export function generateExcelReport(data: ReportData) {
-    // Buat worksheet untuk statistik umum
-    const wsData = [
-        ['Laporan Monitoring Gizi', ''],
-        ['Jenis Laporan', data.type],
-        ['Periode', data.period],
-        ['Tanggal Generate', new Date().toLocaleDateString('id-ID')],
-        [],
-        ['Statistik Umum', ''],
-        ['Total Anak', data.stats.totalChildren],
-        ['Total Orang Tua', data.stats.totalParents],
-        ['Total Artikel', data.stats.totalArticles],
-        ['Gizi Baik', data.stats.goodNutrition],
-        ['Perlu Perhatian', data.stats.warningNutrition],
-        ['Gizi Buruk', data.stats.badNutrition],
-        [],
-        ['Distribusi per Wilayah', ''],
-        ['Wilayah', 'Jumlah Anak'],
-        ...data.stats.childrenByRegion.map(r => [r.region, r.count]),
-    ];
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    XLSX.utils.book_append_sheet(wb, ws, 'Laporan');
-    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(blob, `laporan_${data.type}_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
 export function generatePDFReport(data: ReportData) {
     const doc = new jsPDF();
-
     doc.setFontSize(18);
-    doc.text('Laporan Monitoring Gizi', 14, 22);
-    doc.setFontSize(11);
-    doc.text(`Jenis Laporan: ${data.type}`, 14, 32);
-    doc.text(`Periode: ${data.period}`, 14, 38);
-    doc.text(`Tanggal Generate: ${new Date().toLocaleDateString('id-ID')}`, 14, 44);
+    doc.text('LAPORAN MONITORING GIZI & STUNTING', 14, 22);
 
-    // Tabel statistik umum
+    doc.setFontSize(10);
+    doc.text(`Periode: ${data.period} | Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}`, 14, 30);
+
+    // Ringkasan Statistik
     autoTable(doc, {
-        startY: 50,
-        head: [['Statistik', 'Jumlah']],
+        startY: 40,
+        head: [['Indikator Statistik', 'Jumlah']],
         body: [
-            ['Total Anak', data.stats.totalChildren.toString()],
+            ['Total Anak Terdaftar', data.stats.totalChildren.toString()],
             ['Total Orang Tua', data.stats.totalParents.toString()],
-            ['Total Artikel', data.stats.totalArticles.toString()],
-            ['Gizi Baik', data.stats.goodNutrition.toString()],
-            ['Perlu Perhatian', data.stats.warningNutrition.toString()],
-            ['Gizi Buruk', data.stats.badNutrition.toString()],
+            ['Kondisi Gizi Baik', data.stats.goodNutrition.toString()],
+            ['Kasus Perlu Tindakan (Stunting/Wasting)', data.stats.warningNutrition.toString()],
         ],
+        theme: 'striped',
+        headStyles: { fillColor: [100, 100, 255] }
     });
 
-    // Tabel wilayah
+    // Tabel Detail Anak (Sesuai Permintaan)
+    doc.text('DAFTAR DETAIL ANAK & STATUS ANTROPOMETRI', 14, (doc as any).lastAutoTable.finalY + 15);
     autoTable(doc, {
-        startY: (doc as any).lastAutoTable.finalY + 10,
-        head: [['Wilayah', 'Jumlah Anak']],
-        body: data.stats.childrenByRegion.map(r => [r.region, r.count.toString()]),
+        startY: (doc as any).lastAutoTable.finalY + 20,
+        head: [['Nama Anak', 'L/P', 'Usia', 'BB/TB', 'Status IMT/U', 'Status TB/U (Stunting)']],
+        body: data.stats.childrenList.map(c => [
+            c.name, c.gender, c.ageLabel, `${c.weight}/${c.height}`, c.imtStatus, c.tbuStatus
+        ]),
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [255, 100, 150] }
     });
 
-    doc.save(`laporan_${data.type}_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`Laporan_Gizi_${data.period}.pdf`);
+}
+
+export function generateExcelReport(data: ReportData) {
+    const wsData = [
+        ['LAPORAN MONITORING GIZI ANAK'],
+        [`Periode: ${data.period}`],
+        [],
+        ['RINGKASAN STATISTIK'],
+        ['Total Anak', data.stats.totalChildren],
+        ['Gizi Baik', data.stats.goodNutrition],
+        ['Waspada', data.stats.warningNutrition],
+        [],
+        ['DAFTAR DETAIL ANAK'],
+        ['Nama Anak', 'Gender', 'Usia', 'BB/TB', 'Status IMT/U', 'Status TB/U (Stunting)'],
+        ...data.stats.childrenList.map(c => [
+            c.name, c.gender, c.ageLabel, `${c.weight}/${c.height}`, c.imtStatus, c.tbuStatus
+        ]),
+    ];
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    XLSX.utils.book_append_sheet(wb, ws, 'Laporan_Gizi');
+    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    saveAs(blob, `Laporan_Gizi_${data.period}.xlsx`);
 }
