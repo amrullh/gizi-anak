@@ -45,7 +45,6 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen bg-cream text-moss overflow-x-hidden font-sans">
-      {/* Decorative organic pattern background */}
       <div className="fixed inset-0 opacity-[0.03] pointer-events-none"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5 L35 20 L50 20 L38 30 L43 45 L30 35 L17 45 L22 30 L10 20 L25 20 Z' fill='%231A2A1A' /%3E%3C/svg%3E")`,
@@ -53,7 +52,7 @@ export default function Home() {
         }}
       />
 
-      {/* Floating icons with theme colors */}
+      {/* Floating icons */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         {floatingIcons.map((item, i) => (
           <motion.div
@@ -77,7 +76,6 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Subtle parallax orbs - Moss & Clay theme */}
       <motion.div
         className="fixed top-0 left-0 w-[500px] h-[500px] bg-moss/10 rounded-full blur-[120px] pointer-events-none"
         style={{ x: mousePosition.x * 0.02, y: y1 }}
@@ -87,22 +85,30 @@ export default function Home() {
         style={{ x: mousePosition.x * -0.02, y: y2 }}
       />
 
-      {/* Navbar Minimalist Editorial */}
-      <nav className="relative z-50 border-b border-tan/20 bg-white/60 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
+
+      {/* REVISI NAVBAR: Tombol Seragam (Hijau ke Putih) */}
+      <nav className="fixed top-0 left-0 right-0 z-[100] border-b border-tan/20 bg-white/90 backdrop-blur-lg">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 bg-moss rounded-xl flex items-center justify-center text-white rotate-3 group-hover:rotate-0 transition-transform shadow-lg shadow-moss/20">
+            <div className="w-10 h-10 bg-[#1A2A1A] rounded-xl flex items-center justify-center text-white rotate-3 group-hover:rotate-0 transition-all duration-300 shadow-lg shadow-moss/20">
               <FaSeedling size={20} />
             </div>
-            <span className="text-2xl font-serif italic font-black tracking-tight text-moss">GiziAnak</span>
+            <span className="text-2xl font-serif italic font-black tracking-tight text-[#1A2A1A]">GiziAnak</span>
           </Link>
-          <div className="flex items-center gap-8">
-            <Link href="/login" className="text-moss/60 font-bold hover:text-moss transition-colors text-sm uppercase tracking-widest">
+
+          <div className="flex items-center gap-4 md:gap-6">
+            {/* TOMBOL LOGIN: Seragam Hijau ke Putih */}
+            <Link
+              href="/login"
+              className="bg-[#1A2A1A] hover:bg-white text-white hover:text-[#1A2A1A] border-2 border-[#1A2A1A] px-6 py-2 md:px-8 md:py-2.5 rounded-full font-black text-xs uppercase tracking-[0.2em] transition-all duration-300 active:scale-95 shadow-sm"
+            >
               Masuk
             </Link>
+
+            {/* TOMBOL REGISTER: Seragam Hijau ke Putih */}
             <Link
               href="/register"
-              className="bg-clay text-white px-8 py-3 rounded-full font-bold text-sm uppercase tracking-widest hover:bg-[#1A2A1A] transition-all shadow-xl shadow-clay/20 active:scale-95"
+              className="bg-[#1A2A1A] hover:bg-white text-white hover:text-[#1A2A1A] border-2 border-[#1A2A1A] px-6 py-2 md:px-8 md:py-2.5 rounded-full font-black text-xs uppercase tracking-[0.2em] transition-all duration-300 shadow-xl shadow-moss/10 active:scale-95"
             >
               Gabung Sekarang
             </Link>
@@ -110,9 +116,7 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Main content */}
-      <main className="relative max-w-7xl mx-auto px-6 py-16 md:py-28 text-center md:text-left">
-        {/* Hero Section */}
+      <main className="relative max-w-7xl mx-auto px-6 py-32 md:py-48 text-center md:text-left">
         <div className="grid lg:grid-cols-2 gap-16 items-center mb-32">
           <div className="relative">
             <motion.div
@@ -138,18 +142,17 @@ export default function Home() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                 <Link href="/register">
-                  <button className="bg-moss text-white px-10 py-4 rounded-full font-black text-sm uppercase tracking-widest hover:bg-[#2a3a2a] transition-all shadow-2xl shadow-moss/30 active:scale-95">
+                  <button className="bg-[#1A2A1A] text-white px-10 py-4 rounded-full font-black text-sm uppercase tracking-widest hover:bg-moss transition-all shadow-2xl shadow-moss/30 active:scale-95">
                     Mulai Monitoring
                   </button>
                 </Link>
-                <button className="px-10 py-4 rounded-full border-2 border-tan text-moss font-black text-sm uppercase tracking-widest hover:bg-white transition-all">
+                <button className="px-10 py-4 rounded-full border-2 border-[#1A2A1A]/20 text-[#1A2A1A] font-black text-sm uppercase tracking-widest hover:bg-white hover:border-[#1A2A1A] transition-all">
                   Pelajari Metode
                 </button>
               </div>
             </motion.div>
           </div>
 
-          {/* Visual Heartbeat Graph */}
           <div className="relative hidden lg:flex justify-center items-center">
             <div className="absolute inset-0 bg-gradient-to-tr from-clay/10 to-transparent rounded-[60px] rotate-3 -z-10"></div>
             <div className="w-full h-96 bg-white rounded-[60px] shadow-2xl border border-tan/20 p-12 flex flex-col justify-center overflow-hidden relative">
@@ -264,7 +267,6 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="py-12 text-center text-[10px] font-black uppercase tracking-[0.4em] text-moss/30">
         © 2026 GiziAnak • Mendukung Program Kesehatan Nasional • Makassar, Indonesia
       </footer>
