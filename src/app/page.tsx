@@ -87,8 +87,8 @@ export default function Home() {
         style={{ x: mousePosition.x * -0.02, y: y2 }}
       />
 
-      {/* FIXED NAVBAR: Menggunakan fixed, w-full, top-0 dan z-50 agar tidak terpotong saat scroll */}
-      <nav className="fixed top-0 left-0 right-0 z-[100] border-b border-gray-200 bg-white/90 backdrop-blur-md">
+      {/* Navbar dengan sticky top-0 agar tidak terpotong saat scroll */}
+      <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-2 group">
             <div className="relative w-8 h-8">
@@ -114,9 +114,6 @@ export default function Home() {
           </div>
         </div>
       </nav>
-
-      {/* Spacer agar konten tidak tertutup navbar yang sudah fixed */}
-      <div className="h-16 md:h-20"></div>
 
       {/* Main content */}
       <main className="relative max-w-7xl mx-auto px-6 py-12 md:py-20">
@@ -153,6 +150,7 @@ export default function Home() {
             </Link>
           </motion.div>
 
+          {/* Heartbeat graph mini */}
           <div className="absolute right-0 top-1/2 -translate-y-1/2 hidden lg:block">
             <svg width="200" height="80" viewBox="0 0 200 80">
               <path
@@ -182,6 +180,7 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Dua kolom fitur dengan card interaktif */}
         <div className="grid md:grid-cols-2 gap-8 mb-20">
           <motion.div
             whileHover={{ y: -10, scale: 1.02 }}
@@ -233,6 +232,7 @@ export default function Home() {
           </motion.div>
         </div>
 
+        {/* Garis pemisah dengan animasi */}
         <motion.div
           className="border-t border-gray-200 my-16"
           initial={{ scaleX: 0 }}
@@ -241,6 +241,7 @@ export default function Home() {
           viewport={{ once: true }}
         />
 
+        {/* Bagian "Data Akurat & Terpercaya" dengan ikon medis */}
         <div className="mb-20 flex flex-col md:flex-row gap-8 items-center">
           <div className="flex-1">
             <h3 className="text-2xl font-semibold mb-2">Data Akurat & Terpercaya</h3>
@@ -272,6 +273,7 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Statistik dengan animasi counter */}
         <div ref={statsRef} className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-20">
           {[
             { label: 'Anak Terdaftar', value: '50K+', icon: '👶' },
@@ -304,6 +306,7 @@ export default function Home() {
           ))}
         </div>
 
+        {/* Bagian ajakan dengan hati berdenyut */}
         <div className="bg-gradient-to-br from-pink-50 to-blue-50 rounded-3xl p-12 text-center relative overflow-hidden">
           <motion.div
             className="absolute -top-10 -right-10 text-9xl opacity-10"
@@ -332,6 +335,7 @@ export default function Home() {
         </div>
       </main>
 
+      {/* Footer dengan animasi sederhana */}
       <footer className="border-t border-gray-200 py-8 text-center text-sm text-gray-500">
         <motion.div
           initial={{ opacity: 0 }}

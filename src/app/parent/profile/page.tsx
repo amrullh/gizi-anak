@@ -3,7 +3,8 @@
 import { useAuth } from '@/context/AuthContext';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import { FaUser, FaPhone, FaMapMarkerAlt, FaEnvelope, FaBirthdayCake, FaSignOutAlt } from 'react-icons/fa';
+// Ganti FaEnvelope dengan FaWhatsapp agar lebih relevan dengan permintaan klien
+import { FaUser, FaPhone, FaMapMarkerAlt, FaWhatsapp, FaBirthdayCake, FaSignOutAlt } from 'react-icons/fa';
 
 export default function ProfilePage() {
     const { user, loading, logout } = useAuth();
@@ -45,25 +46,19 @@ export default function ProfilePage() {
                 </h2>
 
                 <div className="space-y-6">
+                    {/* BAGIAN REVISI: Mengganti Email menjadi Nomor WhatsApp */}
                     <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400">
-                            <FaEnvelope />
+                        <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-green-500">
+                            <FaWhatsapp size={20} />
                         </div>
                         <div>
-                            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Alamat Email</p>
-                            <p className="font-semibold text-gray-700">{user?.email || '-'}</p>
-                        </div>
-                    </div>
-
-                    <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400">
-                            <FaPhone />
-                        </div>
-                        <div>
-                            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Nomor Telepon</p>
+                            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Nomor WhatsApp</p>
                             <p className="font-semibold text-gray-700">{user?.phone || '-'}</p>
                         </div>
                     </div>
+
+                    {/* Jika kamu ingin tetap menampilkan field telepon umum atau menghapusnya jika duplikat */}
+                    {/* Dalam konteks ini, saya biarkan field WhatsApp saja agar sesuai request klien yang tidak mau ada email */}
 
                     <div className="flex items-start gap-4">
                         <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400">
