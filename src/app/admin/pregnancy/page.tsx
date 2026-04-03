@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { FaPlus, FaSearch, FaSpinner, FaArrowLeft, FaCalendarCheck, FaChevronDown, FaChevronUp, FaTimes, FaCapsules, FaChartLine } from 'react-icons/fa';
+import { FaPlus, FaSearch, FaSpinner, FaArrowLeft, FaCalendarCheck, FaChevronDown, FaChevronUp, FaTimes, FaCapsules, FaChartLine, FaHeartbeat } from 'react-icons/fa';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { db } from '@/lib/firebase/client';
@@ -216,74 +216,74 @@ export default function AdminPregnancyPage() {
 
     // ================= RENDER =================
     if (view === 'form') return (
-        <div className="space-y-6 animate-in fade-in duration-500">
-            <button onClick={() => setView('select-user')} className="flex items-center gap-2 text-gray-600 hover:text-pink-600 font-medium transition-colors">
+        <div className="space-y-6 animate-in fade-in duration-500 bg-white">
+            <button onClick={() => setView('select-user')} className="flex items-center gap-2 text-gray-500 hover:text-pink-600 font-medium transition-colors">
                 <FaArrowLeft /> Pilih Ulang User
             </button>
 
-            <div className="bg-gradient-to-r from-pink-500 to-rose-500 text-white p-8 rounded-3xl shadow-lg">
-                <h2 className="text-2xl font-black">Registrasi Kehamilan Baru</h2>
-                <p className="opacity-80 font-medium">Ibu: {selectedUser.name} | Usia: {selectedUser.age || '-'} Tahun</p>
+            {/* Header minimalis */}
+            <div className="bg-pink-50 border border-pink-100 p-6 rounded-2xl">
+                <h2 className="text-xl font-serif italic font-semibold text-gray-800">Registrasi Kehamilan Baru</h2>
+                <p className="text-gray-500 text-sm mt-1">Ibu: {selectedUser.name} | Usia: {selectedUser.age || '-'} Tahun</p>
             </div>
 
             <form onSubmit={handleSave} className="space-y-6">
-                <Card className="p-6">
-                    <h3 className="font-bold text-gray-800 mb-6 border-b pb-2 flex items-center gap-2">
-                        <span className="w-2 h-6 bg-pink-500 rounded-full"></span> Riwayat Kehamilan
+                <Card className="p-6 border border-gray-100 shadow-sm rounded-2xl bg-white">
+                    <h3 className="font-semibold text-gray-700 mb-6 border-b border-gray-100 pb-2 flex items-center gap-2">
+                        <span className="w-1.5 h-5 bg-pink-400 rounded-full"></span> Riwayat Kehamilan
                     </h3>
                     <div className="grid md:grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-xs font-black text-gray-400 uppercase mb-2">Tanggal Periksa</label>
-                            <input type="date" value={form.pemeriksaanTanggal} onChange={e => setForm({ ...form, pemeriksaanTanggal: e.target.value })} className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-pink-400 outline-none transition-all" required />
+                            <label className="block text-xs font-medium text-gray-400 uppercase mb-1">Tanggal Periksa</label>
+                            <input type="date" value={form.pemeriksaanTanggal} onChange={e => setForm({ ...form, pemeriksaanTanggal: e.target.value })} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-1 focus:ring-pink-300 focus:border-pink-300 outline-none transition-all" required />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs font-black text-gray-400 uppercase mb-2">Hamil Ke-</label>
-                                <input type="number" value={form.kehamilanKe} onChange={e => setForm({ ...form, kehamilanKe: e.target.value })} className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-pink-400 outline-none" required />
+                                <label className="block text-xs font-medium text-gray-400 uppercase mb-1">Hamil Ke-</label>
+                                <input type="number" value={form.kehamilanKe} onChange={e => setForm({ ...form, kehamilanKe: e.target.value })} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-1 focus:ring-pink-300 focus:border-pink-300 outline-none" required />
                             </div>
                             <div>
-                                <label className="block text-xs font-black text-gray-400 uppercase mb-2">Anak Hidup</label>
-                                <input type="number" value={form.jumlahAnakHidup} onChange={e => setForm({ ...form, jumlahAnakHidup: e.target.value })} className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-pink-400 outline-none" required />
+                                <label className="block text-xs font-medium text-gray-400 uppercase mb-1">Anak Hidup</label>
+                                <input type="number" value={form.jumlahAnakHidup} onChange={e => setForm({ ...form, jumlahAnakHidup: e.target.value })} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-1 focus:ring-pink-300 focus:border-pink-300 outline-none" required />
                             </div>
                         </div>
-                        <div className="md:col-span-2 p-4 bg-rose-50 rounded-2xl flex items-center gap-6">
-                            <label className="flex items-center gap-3 cursor-pointer group">
-                                <input type="checkbox" checked={form.pernahAbortus} onChange={e => setForm({ ...form, pernahAbortus: e.target.checked })} className="w-6 h-6 rounded-lg border-none bg-white text-pink-500 focus:ring-pink-400" />
-                                <span className="font-bold text-rose-700">Pernah Abortus (Keguguran)?</span>
+                        <div className="md:col-span-2 p-4 bg-pink-50/30 border border-pink-100 rounded-xl flex flex-wrap items-center gap-4">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" checked={form.pernahAbortus} onChange={e => setForm({ ...form, pernahAbortus: e.target.checked })} className="w-4 h-4 rounded border-gray-300 text-pink-500 focus:ring-pink-300" />
+                                <span className="text-sm text-gray-700">Pernah Abortus (Keguguran)?</span>
                             </label>
                             {form.pernahAbortus && (
-                                <input type="number" placeholder="Anak Ke-" value={form.abortusAnakKe} onChange={e => setForm({ ...form, abortusAnakKe: e.target.value })} className="flex-1 p-3 bg-white border-none rounded-xl focus:ring-2 focus:ring-pink-400 outline-none shadow-sm" required />
+                                <input type="number" placeholder="Anak Ke-" value={form.abortusAnakKe} onChange={e => setForm({ ...form, abortusAnakKe: e.target.value })} className="flex-1 p-2 bg-white border border-gray-200 rounded-lg focus:ring-1 focus:ring-pink-300 outline-none text-sm" required />
                             )}
                         </div>
                     </div>
                 </Card>
 
-                <Card className="p-6 border-pink-100 bg-white">
-                    <h3 className="font-bold text-gray-800 mb-6 border-b pb-2 flex items-center gap-2">
-                        <FaCalendarCheck className="text-pink-500" /> Perhitungan Medis (HPHT)
+                <Card className="p-6 border border-gray-100 shadow-sm rounded-2xl bg-white">
+                    <h3 className="font-semibold text-gray-700 mb-6 border-b border-gray-100 pb-2 flex items-center gap-2">
+                        <FaCalendarCheck className="text-pink-500 text-sm" /> Perhitungan Medis (HPHT)
                     </h3>
                     <div className="grid md:grid-cols-2 gap-8">
                         <div>
-                            <label className="block text-xs font-black text-pink-500 uppercase mb-2 italic">Tanggal HPHT (Penting)*</label>
-                            <input type="date" value={form.hpht} onChange={e => setForm({ ...form, hpht: e.target.value })} className="w-full p-4 bg-pink-50 border-2 border-pink-100 rounded-2xl focus:border-pink-400 focus:ring-0 outline-none transition-all font-bold text-pink-700" required />
+                            <label className="block text-xs font-medium text-pink-500 uppercase mb-1">Tanggal HPHT *</label>
+                            <input type="date" value={form.hpht} onChange={e => setForm({ ...form, hpht: e.target.value })} className="w-full p-3 bg-pink-50 border border-pink-200 rounded-xl focus:ring-1 focus:ring-pink-300 focus:border-pink-300 outline-none transition-all text-gray-700" required />
                         </div>
 
                         <div className="space-y-4">
-                            <div className="p-4 bg-gradient-to-br from-pink-50 to-rose-50 rounded-2xl border border-pink-100">
-                                <p className="text-[10px] font-black text-pink-400 uppercase tracking-widest">Taksiran Persalinan (HPL)</p>
-                                <p className="text-2xl font-black text-pink-600 mt-1">{formatDateID(estimatedDate)}</p>
+                            <div className="p-3 bg-pink-50 border border-pink-100 rounded-xl">
+                                <p className="text-[10px] font-medium text-pink-500 uppercase tracking-wider">Taksiran Persalinan (HPL)</p>
+                                <p className="text-lg font-semibold text-gray-800 mt-0.5">{formatDateID(estimatedDate)}</p>
                             </div>
 
                             <div>
-                                <label className="block text-xs font-black text-gray-400 uppercase mb-2">Umur Kehamilan Saat Ini (Minggu)</label>
-                                <div className="flex items-center gap-4">
+                                <label className="block text-xs font-medium text-gray-400 uppercase mb-1">Umur Kehamilan Saat Ini (Minggu)</label>
+                                <div className="flex items-center gap-3">
                                     <div className="relative flex-1">
-                                        <input type="number" value={form.umurKehamilanMinggu} readOnly className="w-full p-4 bg-gray-50 border-none rounded-2xl font-black text-xl text-gray-700" />
-                                        <span className="absolute right-4 top-5 font-bold text-gray-300">Minggu</span>
+                                        <input type="number" value={form.umurKehamilanMinggu} readOnly className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-medium text-gray-700" />
                                     </div>
                                     {form.hpht && (
-                                        <div className="px-4 py-2 bg-purple-100 text-purple-700 rounded-xl text-xs font-black uppercase text-center leading-tight">
-                                            Detail:<br />{calculateGestationalAge(form.hpht).weeks}m {calculateGestationalAge(form.hpht).days}h
+                                        <div className="px-3 py-1.5 bg-pink-50 text-pink-600 rounded-lg text-xs font-medium">
+                                            {calculateGestationalAge(form.hpht).weeks}m {calculateGestationalAge(form.hpht).days}h
                                         </div>
                                     )}
                                 </div>
@@ -292,22 +292,22 @@ export default function AdminPregnancyPage() {
                     </div>
                 </Card>
 
-                <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
-                    <button type="button" onClick={() => setShowComplaints(!showComplaints)} className="w-full p-5 flex justify-between items-center hover:bg-gray-50 transition-all">
-                        <span className="font-black text-gray-700 text-sm uppercase tracking-wider">Catatan Keluhan (Opsional)</span>
-                        {showComplaints ? <FaChevronUp className="text-pink-500" /> : <FaChevronDown className="text-gray-300" />}
+                <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+                    <button type="button" onClick={() => setShowComplaints(!showComplaints)} className="w-full p-4 flex justify-between items-center hover:bg-gray-50 transition-all">
+                        <span className="font-medium text-gray-600 text-xs uppercase tracking-wider">Catatan Keluhan (Opsional)</span>
+                        {showComplaints ? <FaChevronUp className="text-pink-400 text-sm" /> : <FaChevronDown className="text-gray-400 text-sm" />}
                     </button>
                     {showComplaints && (
-                        <div className="p-6 grid gap-4 bg-gray-50">
-                            <textarea placeholder="Keluhan Trimester I" value={form.keluhanTrimester1} onChange={e => setForm({ ...form, keluhanTrimester1: e.target.value })} className="w-full p-4 border-none rounded-2xl bg-white shadow-sm focus:ring-2 focus:ring-pink-400 outline-none" />
-                            <textarea placeholder="Keluhan Trimester II" value={form.keluhanTrimester2} onChange={e => setForm({ ...form, keluhanTrimester2: e.target.value })} className="w-full p-4 border-none rounded-2xl bg-white shadow-sm focus:ring-2 focus:ring-pink-400 outline-none" />
-                            <textarea placeholder="Keluhan Trimester III" value={form.keluhanTrimester3} onChange={e => setForm({ ...form, keluhanTrimester3: e.target.value })} className="w-full p-4 border-none rounded-2xl bg-white shadow-sm focus:ring-2 focus:ring-pink-400 outline-none" />
+                        <div className="p-5 grid gap-4 bg-gray-50">
+                            <textarea placeholder="Keluhan Trimester I" value={form.keluhanTrimester1} onChange={e => setForm({ ...form, keluhanTrimester1: e.target.value })} className="w-full p-3 border border-gray-200 rounded-xl bg-white focus:ring-1 focus:ring-pink-300 outline-none text-sm" rows={2} />
+                            <textarea placeholder="Keluhan Trimester II" value={form.keluhanTrimester2} onChange={e => setForm({ ...form, keluhanTrimester2: e.target.value })} className="w-full p-3 border border-gray-200 rounded-xl bg-white focus:ring-1 focus:ring-pink-300 outline-none text-sm" rows={2} />
+                            <textarea placeholder="Keluhan Trimester III" value={form.keluhanTrimester3} onChange={e => setForm({ ...form, keluhanTrimester3: e.target.value })} className="w-full p-3 border border-gray-200 rounded-xl bg-white focus:ring-1 focus:ring-pink-300 outline-none text-sm" rows={2} />
                         </div>
                     )}
                 </div>
 
-                <Button type="submit" fullWidth disabled={isSaving} className="py-5 text-xl font-black rounded-3xl shadow-xl shadow-pink-200">
-                    {isSaving ? <FaSpinner className="animate-spin" /> : 'KONFIRMASI DATA KEHAMILAN'}
+                <Button type="submit" fullWidth disabled={isSaving} className="py-3 rounded-xl bg-pink-500 hover:bg-pink-600 text-white font-semibold transition-all shadow-sm">
+                    {isSaving ? <FaSpinner className="animate-spin mx-auto" /> : 'Konfirmasi Data Kehamilan'}
                 </Button>
             </form>
         </div>
@@ -315,30 +315,34 @@ export default function AdminPregnancyPage() {
 
     // ================= VIEW LIST & SELECT USER =================
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="space-y-6 bg-white">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gray-100 pb-4">
                 <div>
-                    <h1 className="text-3xl font-extrabold text-gray-900">Data Kehamilan Ibu</h1>
-                    <p className="text-gray-500">Monitoring taksiran persalinan dan kesehatan bulanan.</p>
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="h-px w-6 bg-pink-300"></span>
+                        <span className="text-xs font-medium uppercase tracking-[0.2em] text-pink-400">Ibu Hamil</span>
+                    </div>
+                    <h1 className="text-2xl font-serif italic font-semibold text-gray-800">Data Kehamilan Ibu</h1>
+                    <p className="text-gray-400 text-sm">Monitoring taksiran persalinan dan kesehatan bulanan.</p>
                 </div>
-                <Button onClick={() => setView('select-user')} className="rounded-full px-8 shadow-pink-200 shadow-lg">
-                    <FaPlus className="mr-2" /> Tambah Ibu Hamil
+                <Button onClick={() => setView('select-user')} className="rounded-full px-5 py-2 bg-pink-500 hover:bg-pink-600 text-white shadow-sm">
+                    <FaPlus className="mr-2" size={12} /> Tambah Ibu Hamil
                 </Button>
             </div>
 
             {view === 'select-user' && (
-                <Card className="bg-pink-50 border-pink-100 p-6 animate-in slide-in-from-top duration-300">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="font-black text-pink-700 uppercase tracking-widest text-sm">Pilih Calon Ibu Hamil</h3>
-                        <button onClick={() => setView('list')} className="text-gray-400 hover:text-gray-600 transition-colors"><FaTimes size={20} /></button>
+                <Card className="bg-white border border-pink-100 p-6 rounded-2xl shadow-sm animate-in slide-in-from-top duration-300">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-semibold text-pink-500 uppercase tracking-wider text-xs">Pilih Calon Ibu Hamil</h3>
+                        <button onClick={() => setView('list')} className="text-gray-400 hover:text-gray-600"><FaTimes size={18} /></button>
                     </div>
                     <div className="flex gap-3 mb-6">
                         <div className="relative flex-1">
-                            <FaSearch className="absolute left-4 top-4 text-gray-300" />
+                            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-300 text-sm" />
                             <input
                                 type="text"
                                 placeholder="Cari nama ibu..."
-                                className="w-full pl-12 pr-4 py-4 bg-white border-none rounded-2xl outline-none focus:ring-2 focus:ring-pink-400 shadow-sm transition-all"
+                                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-1 focus:ring-pink-300 focus:border-pink-300 transition-all text-sm"
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                             />
@@ -346,7 +350,7 @@ export default function AdminPregnancyPage() {
                     </div>
 
                     {searchError && (
-                        <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm">
+                        <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-xs">
                             {searchError}
                         </div>
                     )}
@@ -354,77 +358,79 @@ export default function AdminPregnancyPage() {
                     <div className="grid sm:grid-cols-2 gap-3">
                         {loading && (
                             <div className="col-span-2 text-center py-6">
-                                <FaSpinner className="animate-spin mx-auto text-pink-500" />
+                                <FaSpinner className="animate-spin mx-auto text-pink-400" />
                             </div>
                         )}
                         {!loading && users.length === 0 && search && (
-                            <p className="col-span-2 text-center text-gray-400 py-6 text-sm font-medium italic">
-                                Nama tidak ditemukan atau Ibu sudah terdaftar dalam program kehamilan.
+                            <p className="col-span-2 text-center text-gray-400 py-6 text-sm italic">
+                                Nama tidak ditemukan atau Ibu sudah terdaftar.
                             </p>
                         )}
                         {users.map(u => (
                             <div
                                 key={u.id}
                                 onClick={() => { setSelectedUser(u); setView('form'); }}
-                                className="p-5 bg-white rounded-2xl border-2 border-transparent hover:border-pink-400 hover:shadow-xl transition-all cursor-pointer flex justify-between items-center group"
+                                className="p-4 bg-white border border-gray-100 rounded-xl hover:border-pink-300 hover:shadow-sm transition-all cursor-pointer flex justify-between items-center group"
                             >
                                 <div>
-                                    <p className="font-black text-gray-700 group-hover:text-pink-600 transition-colors">{u.name}</p>
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">ID: {u.id.substring(0, 8)}</p>
+                                    <p className="font-medium text-gray-800 group-hover:text-pink-600 transition-colors">{u.name}</p>
+                                    <p className="text-[10px] text-gray-400 font-mono">ID: {u.id.substring(0, 8)}</p>
                                 </div>
-                                <span className="text-[10px] bg-pink-100 text-pink-600 px-3 py-1 rounded-full font-black opacity-0 group-hover:opacity-100 transition-opacity">PILIH</span>
+                                <span className="text-[10px] bg-pink-50 text-pink-600 px-2 py-1 rounded-full font-medium opacity-0 group-hover:opacity-100 transition-opacity">PILIH</span>
                             </div>
                         ))}
                     </div>
                 </Card>
             )}
 
-            <Card className="overflow-hidden border-none shadow-xl rounded-3xl">
+            <Card className="overflow-hidden border border-gray-100 shadow-sm rounded-2xl bg-white">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-gray-50 border-b text-gray-400 font-black uppercase text-[10px] tracking-widest">
+                        <thead className="bg-gray-50 border-b border-gray-100 text-gray-500 font-semibold uppercase text-[10px] tracking-wider">
                             <tr>
-                                <th className="p-6">Nama Ibu</th>
-                                <th className="p-6">Usia Kehamilan</th>
-                                <th className="p-6 text-pink-600">HPL (Prediksi)</th>
-                                <th className="p-6">Progress Pil</th>
-                                <th className="p-6 text-center">Opsi</th>
+                                <th className="p-4">Nama Ibu</th>
+                                <th className="p-4">Usia Kehamilan</th>
+                                <th className="p-4 text-pink-600">HPL (Prediksi)</th>
+                                <th className="p-4">Progress Pil</th>
+                                <th className="p-4 text-center">Opsi</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
                             {pregnantList.map(p => (
                                 <tr key={p.id} className="hover:bg-pink-50/30 transition-colors group">
-                                    <td className="p-6">
-                                        <p className="font-black text-gray-800 text-base">{p.nama}</p>
-                                        <p className="text-[10px] text-gray-400 font-bold">Terdaftar: {formatDateID(p.updatedAt)}</p>
+                                    <td className="p-4">
+                                        <p className="font-semibold text-gray-800">{p.nama}</p>
+                                        <p className="text-[10px] text-gray-400">Terdaftar: {formatDateID(p.updatedAt)}</p>
                                     </td>
-                                    <td className="p-6">
-                                        <div className="font-black text-pink-600 text-sm leading-tight">
+                                    <td className="p-4">
+                                        <div className="font-medium text-pink-600 text-sm">
                                             {getGestationalAgeDisplay(p.hpht)}
                                         </div>
                                     </td>
-                                    <td className="p-6">
-                                        <div className="font-black text-pink-600 text-lg leading-tight">{formatDateID(p.taksiranPersalinan)}</div>
-                                        <div className="text-[10px] text-gray-400 font-bold italic">HPHT: {formatDateID(p.hpht)}</div>
+                                    <td className="p-4">
+                                        <div className="font-semibold text-gray-800 text-base">{formatDateID(p.taksiranPersalinan)}</div>
+                                        <div className="text-[10px] text-gray-400">HPHT: {formatDateID(p.hpht)}</div>
                                     </td>
-                                    <td className="p-6">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-24 bg-gray-200 rounded-full h-2 shadow-inner overflow-hidden">
-                                                <div className="bg-gradient-to-r from-pink-500 to-rose-400 h-2 rounded-full" style={{ width: `${(p.pillProgress || 0) / 90 * 100}%` }}></div>
+                                    <td className="p-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-20 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                                <div className="bg-pink-400 h-1.5 rounded-full" style={{ width: `${(p.pillProgress || 0) / 90 * 100}%` }}></div>
                                             </div>
-                                            <span className="text-xs font-black text-gray-500">{p.pillProgress || 0}/90</span>
+                                            <span className="text-xs text-gray-500">{p.pillProgress || 0}/90</span>
                                         </div>
                                     </td>
-                                    <td className="p-6 text-center">
-                                        <button onClick={() => setMonitoringUser(p)} className="bg-white border-2 border-pink-100 text-pink-600 px-6 py-2 rounded-2xl text-[10px] font-black hover:bg-pink-600 hover:text-white hover:border-pink-600 shadow-sm transition-all uppercase tracking-widest">Pantau</button>
+                                    <td className="p-4 text-center">
+                                        <button onClick={() => setMonitoringUser(p)} className="bg-white border border-pink-200 text-pink-600 px-4 py-1.5 rounded-full text-[10px] font-medium hover:bg-pink-500 hover:text-white hover:border-pink-500 transition-all uppercase tracking-wider shadow-sm">
+                                            Pantau
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                     {pregnantList.length === 0 && !loading && (
-                        <div className="py-20 text-center">
-                            <p className="text-gray-300 font-black uppercase tracking-widest">Belum ada data ibu hamil</p>
+                        <div className="py-16 text-center">
+                            <p className="text-gray-300 font-medium uppercase tracking-wider text-sm">Belum ada data ibu hamil</p>
                         </div>
                     )}
                 </div>
@@ -432,73 +438,71 @@ export default function AdminPregnancyPage() {
 
             {/* Modal Pantau Bulanan */}
             {monitoringUser && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                        <div className="sticky top-0 bg-white p-6 border-b flex justify-between items-center">
+                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-100">
+                        <div className="sticky top-0 bg-white p-5 border-b border-gray-100 flex justify-between items-center">
                             <div>
-                                <h2 className="text-2xl font-black text-gray-800">Monitoring Ibu Hamil</h2>
-                                <div className="text-gray-500 text-sm space-y-1">
+                                <h2 className="text-xl font-serif italic font-semibold text-gray-800">Monitoring Ibu Hamil</h2>
+                                <div className="text-gray-500 text-sm space-y-0.5">
                                     <p>{monitoringUser.nama} | Hamil ke-{monitoringUser.kehamilanKe}</p>
-                                    <p className="text-xs text-pink-600 font-medium">
-                                        Usia kehamilan saat ini: {getGestationalAgeDisplay(monitoringUser.hpht)}
-                                    </p>
+                                    <p className="text-xs text-pink-500">Usia kehamilan: {getGestationalAgeDisplay(monitoringUser.hpht)}</p>
                                 </div>
                             </div>
-                            <button onClick={() => setMonitoringUser(null)} className="text-gray-400 hover:text-gray-600"><FaTimes size={24} /></button>
+                            <button onClick={() => setMonitoringUser(null)} className="text-gray-400 hover:text-gray-600"><FaTimes size={20} /></button>
                         </div>
 
                         <div className="p-6 space-y-6">
                             {/* Progress Pil */}
-                            <div className="bg-pink-50 p-5 rounded-2xl">
-                                <h3 className="font-black text-pink-700 flex items-center gap-2 mb-4"><FaCapsules /> Progress Konsumsi Pil Zat Besi</h3>
-                                <div className="flex items-center gap-4">
+                            <div className="bg-pink-50/40 border border-pink-100 p-4 rounded-xl">
+                                <h3 className="font-semibold text-pink-600 flex items-center gap-2 text-sm mb-3"><FaCapsules /> Progress Konsumsi Pil Zat Besi</h3>
+                                <div className="flex items-center gap-3">
                                     <input type="range" min="0" max="90" value={monitoringUser.pillProgress || 0} onChange={(e) => handleUpdatePill(monitoringUser.id, parseInt(e.target.value))} className="flex-1 accent-pink-500" />
-                                    <span className="font-black text-pink-600 min-w-[60px] text-center">{monitoringUser.pillProgress || 0}/90</span>
+                                    <span className="font-medium text-pink-600 min-w-[50px] text-center text-sm">{monitoringUser.pillProgress || 0}/90</span>
                                 </div>
                             </div>
 
                             {/* Form Input Bulanan */}
-                            <div className="bg-gray-50 p-5 rounded-2xl">
-                                <h3 className="font-black text-gray-700 flex items-center gap-2 mb-4"><FaChartLine /> Input Data Bulanan</h3>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                <h3 className="font-semibold text-gray-700 flex items-center gap-2 text-sm mb-4"><FaChartLine className="text-pink-500" /> Input Data Bulanan</h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                     <div>
-                                        <label className="block text-xs font-black text-gray-400 uppercase mb-1">BB (kg)</label>
-                                        <input type="number" step="0.1" value={monthlyForm.bb} onChange={e => setMonthlyForm({ ...monthlyForm, bb: e.target.value })} className="w-full p-3 bg-white border-none rounded-xl focus:ring-2 focus:ring-pink-400 outline-none" />
+                                        <label className="block text-[10px] font-medium text-gray-400 uppercase mb-0.5">BB (kg)</label>
+                                        <input type="number" step="0.1" value={monthlyForm.bb} onChange={e => setMonthlyForm({ ...monthlyForm, bb: e.target.value })} className="w-full p-2 bg-white border border-gray-200 rounded-lg focus:ring-1 focus:ring-pink-300 outline-none text-sm" />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-black text-gray-400 uppercase mb-1">TB (cm)</label>
-                                        <input type="number" step="0.1" value={monthlyForm.tb} onChange={e => setMonthlyForm({ ...monthlyForm, tb: e.target.value })} className="w-full p-3 bg-white border-none rounded-xl focus:ring-2 focus:ring-pink-400 outline-none" />
+                                        <label className="block text-[10px] font-medium text-gray-400 uppercase mb-0.5">TB (cm)</label>
+                                        <input type="number" step="0.1" value={monthlyForm.tb} onChange={e => setMonthlyForm({ ...monthlyForm, tb: e.target.value })} className="w-full p-2 bg-white border border-gray-200 rounded-lg focus:ring-1 focus:ring-pink-300 outline-none text-sm" />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-black text-gray-400 uppercase mb-1">HB (g/dL)</label>
-                                        <input type="number" step="0.1" value={monthlyForm.hb} onChange={e => setMonthlyForm({ ...monthlyForm, hb: e.target.value })} className="w-full p-3 bg-white border-none rounded-xl focus:ring-2 focus:ring-pink-400 outline-none" />
+                                        <label className="block text-[10px] font-medium text-gray-400 uppercase mb-0.5">HB (g/dL)</label>
+                                        <input type="number" step="0.1" value={monthlyForm.hb} onChange={e => setMonthlyForm({ ...monthlyForm, hb: e.target.value })} className="w-full p-2 bg-white border border-gray-200 rounded-lg focus:ring-1 focus:ring-pink-300 outline-none text-sm" />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-black text-gray-400 uppercase mb-1">LILA (cm)</label>
-                                        <input type="number" step="0.1" value={monthlyForm.lila} onChange={e => setMonthlyForm({ ...monthlyForm, lila: e.target.value })} className="w-full p-3 bg-white border-none rounded-xl focus:ring-2 focus:ring-pink-400 outline-none" />
+                                        <label className="block text-[10px] font-medium text-gray-400 uppercase mb-0.5">LILA (cm)</label>
+                                        <input type="number" step="0.1" value={monthlyForm.lila} onChange={e => setMonthlyForm({ ...monthlyForm, lila: e.target.value })} className="w-full p-2 bg-white border border-gray-200 rounded-lg focus:ring-1 focus:ring-pink-300 outline-none text-sm" />
                                     </div>
                                 </div>
-                                <div className="mt-4">
-                                    <textarea placeholder="Keluhan (opsional)" value={monthlyForm.keluhan} onChange={e => setMonthlyForm({ ...monthlyForm, keluhan: e.target.value })} className="w-full p-3 bg-white border-none rounded-xl focus:ring-2 focus:ring-pink-400 outline-none" rows={2} />
+                                <div className="mt-3">
+                                    <textarea placeholder="Keluhan (opsional)" value={monthlyForm.keluhan} onChange={e => setMonthlyForm({ ...monthlyForm, keluhan: e.target.value })} className="w-full p-2 bg-white border border-gray-200 rounded-lg focus:ring-1 focus:ring-pink-300 outline-none text-sm" rows={2} />
                                 </div>
-                                <Button onClick={handleSaveMonthly} className="mt-4 w-full">Simpan Data Bulanan</Button>
+                                <Button onClick={handleSaveMonthly} className="mt-3 w-full py-2 rounded-lg bg-pink-500 hover:bg-pink-600 text-white text-sm font-medium">Simpan Data Bulanan</Button>
                             </div>
 
                             {/* Riwayat Bulanan */}
                             <div>
-                                <h3 className="font-black text-gray-700 mb-3">Riwayat Pemeriksaan Bulanan</h3>
+                                <h3 className="font-semibold text-gray-700 mb-3 text-sm">Riwayat Pemeriksaan Bulanan</h3>
                                 <div className="space-y-2 max-h-60 overflow-y-auto">
                                     {monitoringUser.monthlyRecords?.length > 0 ? (
                                         monitoringUser.monthlyRecords.slice().reverse().map((rec: any, idx: number) => (
-                                            <div key={idx} className="bg-white border rounded-xl p-3 text-sm">
-                                                <div className="flex justify-between text-xs text-gray-400 font-bold mb-1">
+                                            <div key={idx} className="bg-white border border-gray-100 rounded-xl p-3 text-sm shadow-sm">
+                                                <div className="flex justify-between text-xs text-gray-400 font-medium mb-1">
                                                     <span>{formatDateID(rec.tanggal)}</span>
                                                 </div>
                                                 <div className="grid grid-cols-4 gap-2 text-center">
-                                                    <div><span className="block text-[10px] text-gray-400">BB</span><span className="font-black">{rec.bb} kg</span></div>
-                                                    <div><span className="block text-[10px] text-gray-400">TB</span><span className="font-black">{rec.tb} cm</span></div>
-                                                    <div><span className="block text-[10px] text-gray-400">HB</span><span className="font-black">{rec.hb} g/dL</span></div>
-                                                    <div><span className="block text-[10px] text-gray-400">LILA</span><span className="font-black">{rec.lila} cm</span></div>
+                                                    <div><span className="block text-[9px] text-gray-400">BB</span><span className="font-medium text-gray-700">{rec.bb} kg</span></div>
+                                                    <div><span className="block text-[9px] text-gray-400">TB</span><span className="font-medium text-gray-700">{rec.tb} cm</span></div>
+                                                    <div><span className="block text-[9px] text-gray-400">HB</span><span className="font-medium text-gray-700">{rec.hb} g/dL</span></div>
+                                                    <div><span className="block text-[9px] text-gray-400">LILA</span><span className="font-medium text-gray-700">{rec.lila} cm</span></div>
                                                 </div>
                                                 {rec.keluhan && <p className="text-xs mt-2 text-gray-500 italic">Keluhan: {rec.keluhan}</p>}
                                             </div>
