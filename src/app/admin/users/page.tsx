@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import { FaUserPlus, FaUserShield, FaWhatsapp, FaLock, FaUserTag } from 'react-icons/fa';
+import { FaUserPlus, FaUserShield, FaWhatsapp, FaLock, FaUserTag, FaSeedling } from 'react-icons/fa';
 import { useAuth } from '@/context/AuthContext';
 
 export default function AdminUsersPage() {
@@ -24,7 +24,6 @@ export default function AdminUsersPage() {
         setMessage({ type: '', text: '' });
 
         try {
-            // Memanggil fungsi registerByAdmin (Nomor HP akan dikonversi ke email virtual di AuthContext)
             await registerByAdmin(
                 formData.phone,
                 formData.password,
@@ -37,7 +36,6 @@ export default function AdminUsersPage() {
                 text: `Berhasil mendaftarkan ${formData.name} sebagai ${formData.role === 'admin' ? 'Admin' : 'Orang Tua'}!`
             });
 
-            // Reset form setelah berhasil
             setFormData({
                 name: '',
                 phone: '',
@@ -52,65 +50,80 @@ export default function AdminUsersPage() {
     };
 
     return (
-        <div className="space-y-6 p-4 md:p-0">
-            <div className="flex flex-col gap-2">
-                <h1 className="text-3xl font-black text-gray-800">Manajemen Pengguna</h1>
-                <p className="text-gray-500">Daftarkan akun Admin Puskesmas atau Orang Tua secara manual.</p>
+        <div className="space-y-10 p-4 md:p-0">
+            {/* Header Section */}
+            <div className="flex flex-col gap-2 border-b border-tan/20 pb-6">
+                <div className="flex items-center gap-2">
+                    <span className="h-px w-8 bg-clay/40"></span>
+                    <span className="text-xs font-bold uppercase tracking-[0.3em] text-clay/60">
+                        Administrasi Akun
+                    </span>
+                </div>
+                <h1 className="text-4xl md:text-5xl font-serif italic font-black text-moss leading-tight">
+                    Manajemen <span className="text-clay/50">Pengguna</span>
+                </h1>
+                <p className="text-moss/50 max-w-xl">Daftarkan akun petugas Puskesmas atau Orang Tua secara manual untuk sinkronisasi data monitoring.</p>
             </div>
 
             {message.text && (
-                <div className={`p-4 rounded-xl border animate-in fade-in slide-in-from-top-2 duration-300 ${message.type === 'success'
-                        ? 'bg-green-50 border-green-200 text-green-700'
-                        : 'bg-red-50 border-red-200 text-red-700'
+                <div className={`p-5 rounded-3xl border-2 animate-in fade-in slide-in-from-top-4 duration-500 font-bold text-sm ${message.type === 'success'
+                    ? 'bg-sage/10 border-sage/20 text-moss'
+                    : 'bg-red-50 border-red-100 text-red-600'
                     }`}>
-                    {message.text}
+                    <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${message.type === 'success' ? 'bg-moss text-white' : 'bg-red-500 text-white'}`}>
+                            {message.type === 'success' ? '✓' : '!'}
+                        </div>
+                        {message.text}
+                    </div>
                 </div>
             )}
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-3 gap-10">
                 {/* Form Registrasi */}
-                <Card className="p-6 md:col-span-2 shadow-sm border-gray-100">
-                    <h2 className="text-lg font-bold mb-6 flex items-center gap-2">
-                        <FaUserPlus className="text-pink-600" /> Form Registrasi Akun
+                <Card className="p-8 md:col-span-2 shadow-2xl shadow-moss/5 border-tan/20 rounded-[40px] bg-white relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-sage/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+
+                    <h2 className="text-2xl font-serif italic font-bold mb-8 flex items-center gap-3 text-moss relative z-10">
+                        <FaUserPlus className="text-clay" /> Form Registrasi Akun
                     </h2>
-                    <form onSubmit={handleRegister} className="space-y-5">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    placeholder="Masukkan nama lengkap"
-                                    className="w-full p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-pink-500 transition"
-                                    value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    required
-                                />
-                            </div>
+
+                    <form onSubmit={handleRegister} className="space-y-6 relative z-10">
+                        <div className="space-y-2">
+                            <label className="text-xs font-black uppercase tracking-widest text-moss/40 ml-1">Nama Lengkap</label>
+                            <input
+                                type="text"
+                                placeholder="Nama sesuai identitas petugas/ortu"
+                                className="w-full p-4 bg-cream/30 border border-tan/30 rounded-2xl outline-none focus:ring-2 focus:ring-moss focus:border-transparent transition-all font-medium text-moss placeholder:text-moss/20"
+                                value={formData.name}
+                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                required
+                            />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-                                    <FaWhatsapp className="text-green-500" /> Nomor WhatsApp
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-xs font-black uppercase tracking-widest text-moss/40 ml-1 flex items-center gap-2">
+                                    <FaWhatsapp className="text-moss" /> Nomor WhatsApp
                                 </label>
                                 <input
                                     type="tel"
                                     placeholder="Contoh: 08123456789"
-                                    className="w-full p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-pink-500 transition"
+                                    className="w-full p-4 bg-cream/30 border border-tan/30 rounded-2xl outline-none focus:ring-2 focus:ring-moss focus:border-transparent transition-all font-medium text-moss placeholder:text-moss/20"
                                     value={formData.phone}
                                     onChange={e => setFormData({ ...formData, phone: e.target.value })}
                                     required
                                 />
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-                                    <FaLock className="text-gray-400" /> Password
+                            <div className="space-y-2">
+                                <label className="text-xs font-black uppercase tracking-widest text-moss/40 ml-1 flex items-center gap-2">
+                                    <FaLock className="text-moss/30" /> Password
                                 </label>
                                 <input
                                     type="password"
                                     placeholder="Min. 6 Karakter"
-                                    className="w-full p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-pink-500 transition"
+                                    className="w-full p-4 bg-cream/30 border border-tan/30 rounded-2xl outline-none focus:ring-2 focus:ring-moss focus:border-transparent transition-all font-medium text-moss placeholder:text-moss/20"
                                     value={formData.password}
                                     onChange={e => setFormData({ ...formData, password: e.target.value })}
                                     required
@@ -118,46 +131,66 @@ export default function AdminUsersPage() {
                             </div>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-                                <FaUserTag className="text-blue-500" /> Hak Akses (Role)
+                        <div className="space-y-2">
+                            <label className="text-xs font-black uppercase tracking-widest text-moss/40 ml-1 flex items-center gap-2">
+                                <FaUserTag className="text-clay" /> Hak Akses (Role)
                             </label>
                             <select
-                                className="w-full p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-pink-500 bg-white transition cursor-pointer"
+                                className="w-full p-4 bg-cream/30 border border-tan/30 rounded-2xl outline-none focus:ring-2 focus:ring-moss focus:border-transparent transition-all font-bold text-moss cursor-pointer appearance-none"
                                 value={formData.role}
                                 onChange={e => setFormData({ ...formData, role: e.target.value as any })}
                             >
-                                <option value="parent">Orang Tua (Parent)</option>
-                                <option value="admin">Admin Puskesmas (Full Access)</option>
+                                <option value="parent">Orang Tua (Akses Monitoring Anak)</option>
+                                <option value="admin">Admin Puskesmas (Akses Dashboard Penuh)</option>
                             </select>
                         </div>
 
-                        <div className="pt-4">
-                            <Button type="submit" fullWidth disabled={loading}>
-                                {loading ? 'Mendaftarkan Akun...' : 'Daftarkan Akun Sekarang'}
-                            </Button>
+                        <div className="pt-6">
+                            {/* FIX BUTTON: Background Moss Green pekat agar tidak pink */}
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full py-4 rounded-full bg-[#1A2A1A] hover:bg-moss text-white font-bold tracking-wide transition-all shadow-xl shadow-moss/20 active:scale-[0.98] disabled:bg-moss/50 disabled:cursor-not-allowed"
+                            >
+                                {loading ? 'Memproses Pendaftaran...' : 'Daftarkan Akun Sekarang'}
+                            </button>
                         </div>
                     </form>
                 </Card>
 
                 {/* Sidebar Info */}
-                <div className="space-y-4">
-                    <Card className="p-6 bg-blue-50 border-blue-100 shadow-none">
-                        <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-blue-700">
-                            <FaUserShield /> Keamanan Akun
-                        </h2>
-                        <ul className="text-sm text-blue-600 space-y-3 list-disc ml-4 leading-relaxed">
-                            <li><strong>Nomor WhatsApp</strong> digunakan sebagai ID untuk masuk (Login).</li>
-                            <li>Gunakan format nomor standar (misal: 081234...).</li>
-                            <li>Role <strong>Admin</strong> memiliki akses penuh ke laporan dan artikel.</li>
-                            <li>Role <strong>Orang Tua</strong> hanya bisa melihat data anak mereka sendiri.</li>
-                            <li>Jangan lupa memberikan password kepada pengguna setelah Anda mendaftarkannya.</li>
-                        </ul>
-                    </Card>
+                <div className="space-y-8">
+                    {/* FIX CARD: Background dipastikan Hijau Moss pekat agar teks terlihat */}
+                    <div className="p-8 bg-[#1A2A1A] text-white border-none shadow-2xl shadow-moss/20 rounded-[40px] relative overflow-hidden">
+                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-clay/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3"></div>
 
-                    <Card className="p-6 bg-pink-50 border-pink-100 shadow-none">
-                        <p className="text-sm text-pink-600 font-medium italic">
-                            "Pendaftaran manual membantu menjangkau orang tua yang memiliki keterbatasan akses teknologi."
+                        <h2 className="text-xl font-serif italic font-bold mb-6 flex items-center gap-3 text-white relative z-10">
+                            <FaUserShield className="text-clay" /> Keamanan Akun
+                        </h2>
+                        <ul className="text-sm text-white/90 space-y-4 relative z-10 leading-relaxed font-medium">
+                            <li className="flex gap-3">
+                                <span className="text-clay font-bold">•</span>
+                                <span><strong>WhatsApp ID</strong> sebagai identitas masuk sistem.</span>
+                            </li>
+                            <li className="flex gap-3">
+                                <span className="text-clay font-bold">•</span>
+                                <span>Role <strong>Admin</strong> memiliki akses penuh dashboard.</span>
+                            </li>
+                            <li className="flex gap-3">
+                                <span className="text-clay font-bold">•</span>
+                                <span>Role <strong>Orang Tua</strong> hanya melihat data anak mereka.</span>
+                            </li>
+                            <li className="flex gap-3">
+                                <span className="text-clay font-bold">•</span>
+                                <span>Serahkan password ke pengguna secara mandiri.</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <Card className="p-8 bg-sage/10 border-2 border-sage/20 shadow-none rounded-[40px] flex items-start gap-4">
+                        <FaSeedling className="text-moss text-2xl mt-1 shrink-0" />
+                        <p className="text-sm text-moss/60 font-serif italic leading-relaxed">
+                            "Pendaftaran manual mempermudah bidan dalam mendampingi orang tua yang belum akrab dengan registrasi digital mandiri."
                         </p>
                     </Card>
                 </div>

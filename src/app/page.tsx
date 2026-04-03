@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Button from '@/components/ui/Button'
 import { useEffect, useRef, useState } from 'react'
-import { motion, useScroll, useTransform } from 'framer-motion' 
+import { motion, useScroll, useTransform } from 'framer-motion'
 
 export default function Home() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });

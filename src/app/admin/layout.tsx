@@ -10,12 +10,12 @@ import {
     FaChartBar,
     FaBars,
     FaTimes,
-    FaUser,
     FaBell,
     FaCog,
     FaPlus,
     FaVenusMars,
-    FaUsers
+    FaUsers,
+    FaSeedling
 } from 'react-icons/fa'
 import { useAuth } from '@/context/AuthContext'
 
@@ -33,8 +33,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-white">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
+            <div className="min-h-screen flex items-center justify-center bg-cream">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-clay"></div>
             </div>
         )
     }
@@ -56,22 +56,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const initial = user.name ? user.name.charAt(0).toUpperCase() : 'A'
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
-            {/* MOBILE HEADER - Apple style minimal */}
-            <header className="lg:hidden bg-white/80 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-40">
+        <div className="min-h-screen bg-cream flex flex-col">
+            {/* MOBILE HEADER */}
+            <header className="lg:hidden bg-white border-b border-tan/20 sticky top-0 z-40">
                 <div className="flex justify-between items-center px-4 py-3">
-                    <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition">
-                        {sidebarOpen ? <FaTimes size={20} className="text-gray-600" /> : <FaBars size={20} className="text-gray-600" />}
+                    <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 rounded-full hover:bg-sage/10 transition text-[#1A2A1A]">
+                        {sidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
                     </button>
                     <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 bg-gray-900 rounded-full flex items-center justify-center text-white text-xs font-semibold">P</div>
-                        <span className="font-medium text-gray-800 text-sm">Puskesmas</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <FaBell className="text-gray-400 text-sm" />
-                        <div className="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 text-xs font-medium">
-                            {initial}
+                        <div className="w-8 h-8 bg-[#1A2A1A] rounded-full flex items-center justify-center text-white">
+                            <FaSeedling size={14} />
                         </div>
+                        <span className="font-serif italic font-bold text-[#1A2A1A]">Puskesmas</span>
+                    </div>
+                    <div className="w-8 h-8 bg-clay/10 rounded-full flex items-center justify-center text-clay text-xs font-bold border border-clay/20">
+                        {initial}
                     </div>
                 </div>
             </header>
@@ -79,21 +78,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="flex flex-1">
                 {/* SIDEBAR OVERLAY */}
                 {sidebarOpen && (
-                    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm lg:hidden z-50" onClick={() => setSidebarOpen(false)} />
+                    <div className="fixed inset-0 bg-[#1A2A1A]/40 backdrop-blur-sm lg:hidden z-50" onClick={() => setSidebarOpen(false)} />
                 )}
 
-                {/* SIDEBAR - Apple style minimal, white, thin border */}
+                {/* SIDEBAR REVISED */}
                 <aside className={`
-                    fixed lg:sticky top-0 left-0 z-50 w-64 h-screen bg-white border-r border-gray-100
+                    fixed lg:sticky top-0 left-0 z-50 w-72 h-screen bg-white border-r border-tan/20
                     transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
-                    lg:translate-x-0 transition-transform duration-200 flex flex-col shadow-sm
+                    lg:translate-x-0 transition-transform duration-300 flex flex-col shadow-sm
                 `}>
-                    <div className="p-5 border-b border-gray-100 lg:block hidden">
-                        <h2 className="text-xl font-semibold tracking-tight text-gray-900">Puskesmas</h2>
-                        <p className="text-xs text-gray-400 mt-0.5">Admin Dashboard</p>
+                    <div className="p-8 border-b border-tan/10 lg:block hidden">
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 bg-[#1A2A1A] rounded-2xl flex items-center justify-center text-white rotate-3 shadow-lg shadow-moss/20">
+                                <FaSeedling size={18} />
+                            </div>
+                            <h2 className="text-2xl font-serif italic font-black text-[#1A2A1A] tracking-tight">Puskesmas</h2>
+                        </div>
+                        <p className="text-[10px] uppercase tracking-[0.3em] text-clay font-bold ml-1">Admin Portal</p>
                     </div>
 
-                    <nav className="p-3 flex-1 overflow-y-auto">
+                    <nav className="p-5 flex-1 overflow-y-auto space-y-2">
                         {navItems.map((item) => {
                             const isActive = pathname === item.href
                             return (
@@ -102,23 +106,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                     href={item.href}
                                     onClick={() => setSidebarOpen(false)}
                                     className={`
-                                        flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-all duration-150
+                                        flex items-center gap-4 px-5 py-4 rounded-full transition-all duration-300 group
                                         ${isActive
-                                            ? 'bg-gray-100 text-gray-900'
-                                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                                            ? 'bg-[#1A2A1A] text-white shadow-xl shadow-moss/30 scale-[1.02]'
+                                            : 'text-[#1A2A1A]/70 hover:bg-[#1A2A1A] hover:text-white hover:shadow-lg hover:shadow-moss/20'
                                         }
                                     `}
                                 >
-                                    <item.icon size={18} />
-                                    <span className="text-sm font-medium">{item.label}</span>
+                                    <item.icon size={20} className={`${isActive ? 'text-clay' : 'group-hover:scale-110 group-hover:text-clay'} transition-all`} />
+                                    <span className="text-sm font-bold tracking-tight">{item.label}</span>
                                 </Link>
                             )
                         })}
                     </nav>
 
-                    <div className="p-3 border-t border-gray-100">
-                        <Link href="/admin/settings" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-all text-sm font-medium">
-                            <FaCog size={18} />
+                    <div className="p-5 border-t border-tan/10">
+                        <Link href="/admin/settings" className="flex items-center gap-4 px-5 py-4 rounded-full text-[#1A2A1A]/70 hover:bg-clay hover:text-white transition-all text-sm font-bold group">
+                            <FaCog size={20} className="group-hover:rotate-90 transition-transform duration-500" />
                             <span>Pengaturan</span>
                         </Link>
                     </div>
@@ -126,30 +130,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                 {/* MAIN CONTENT AREA */}
                 <div className="flex-1 flex flex-col min-w-0">
-                    {/* DESKTOP HEADER - Apple style, clean */}
-                    <header className="hidden lg:block bg-white/80 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-40">
-                        <div className="h-16 flex justify-between items-center px-6">
-                            <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center">
-                                    <span className="text-white text-xs font-semibold">P</span>
-                                </div>
+                    <header className="hidden lg:block bg-white/80 backdrop-blur-md border-b border-tan/20 sticky top-0 z-40">
+                        <div className="h-20 flex justify-between items-center px-10">
+                            <div className="flex items-center gap-4">
+                                <div className="h-10 w-1 bg-clay rounded-full"></div>
                                 <div>
-                                    <h1 className="font-semibold text-gray-900 text-sm leading-tight">Puskesmas GiziAnak</h1>
-                                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Administrator</p>
+                                    <h1 className="font-serif italic font-black text-[#1A2A1A] text-xl">GiziAnak</h1>
+                                    <p className="text-[10px] text-clay font-black uppercase tracking-[0.2em]">Dashboard Utama</p>
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-5">
-                                <button className="relative p-1 text-gray-400 hover:text-gray-600 transition">
-                                    <FaBell size={18} />
-                                    <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+                            <div className="flex items-center gap-8">
+                                <button className="relative p-2 text-[#1A2A1A]/40 hover:text-[#1A2A1A] transition-colors">
+                                    <FaBell size={22} />
+                                    <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-clay rounded-full border-2 border-white"></span>
                                 </button>
-                                <div className="flex items-center gap-3 pl-4 border-l border-gray-100">
+
+                                <div className="flex items-center gap-5 pl-8 border-l border-tan/20">
                                     <div className="text-right">
-                                        <div className="font-medium text-gray-800 text-sm">{user.name || 'Admin'}</div>
-                                        <div className="text-[10px] text-gray-400">{user.email}</div>
+                                        <div className="font-black text-[#1A2A1A] text-sm leading-none mb-1">{user.name || 'Admin'}</div>
+                                        <div className="text-[11px] text-clay font-bold">{user.email}</div>
                                     </div>
-                                    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 text-sm font-medium">
+                                    <div className="w-12 h-12 bg-[#1A2A1A] text-white rounded-2xl flex items-center justify-center text-sm font-black shadow-lg shadow-moss/20 border-2 border-white hover:scale-105 transition-transform cursor-pointer">
                                         {initial}
                                     </div>
                                 </div>
@@ -157,8 +159,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         </div>
                     </header>
 
-                    {/* MAIN CONTENT */}
-                    <main className="flex-1 p-5 lg:p-8 bg-gray-50">
+                    <main className="flex-1 p-8 lg:p-12 bg-cream">
                         <div className="max-w-7xl mx-auto">
                             {children}
                         </div>
