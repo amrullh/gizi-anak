@@ -1,157 +1,292 @@
-'use client'
+'use client';
 
-import { FaUsers, FaChild, FaNewspaper, FaExclamationTriangle, FaChartBar, FaPlus, FaEye, FaWhatsapp, FaBaby } from 'react-icons/fa'
-import Card from '@/components/ui/Card'
+import {
+    FaUsers,
+    FaChild,
+    FaNewspaper,
+    FaExclamationTriangle,
+    FaChartBar,
+    FaPlus,
+    FaEye,
+    FaWhatsapp,
+    FaBaby,
+    FaArrowRight,
+    FaFileDownload,
+    FaCalendarAlt,
+    FaHeartbeat,
+    FaSeedling,
+} from 'react-icons/fa';
 import { useAdminData } from '@/hooks/useAdminData';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 
 export default function AdminDashboard() {
     const { loading, stats, alerts } = useAdminData();
 
+    // Fungsi untuk menentukan warna status gizi
+    const getStatusColor = (status: string) => {
+        const s = status.toLowerCase();
+        if (s.includes('stunting') || s.includes('malnutrisi') || s.includes('buruk'))
+            return { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-200' };
+        if (s.includes('overweight') || s.includes('gemuk'))
+            return { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-200' };
+        if (s.includes('obesitas') || s.includes('gemuk'))
+            return { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-200' };
+        if (s.includes('underweight') || s.includes('kurang'))
+            return { bg: 'bg-yellow-100', text: 'text-yellow-700', border: 'border-yellow-200' };
+        return { bg: 'bg-clay/10', text: 'text-clay', border: 'border-clay/20' };
+    };
+
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+            <div className="min-h-screen flex items-center justify-center bg-cream">
+                <div className="flex flex-col items-center gap-5">
+                    <div className="relative">
+                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-clay"></div>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <FaSeedling className="text-sage/30 text-sm" />
+                        </div>
+                    </div>
+                    <p className="text-moss/50 font-medium tracking-wide animate-pulse">
+                        Menyiapkan data puskesmas...
+                    </p>
+                </div>
             </div>
         );
     }
 
-    const statsCards = [
-        { title: 'Total Anak', value: stats.totalChildren, icon: FaChild, bg: 'bg-purple-100', text: 'text-purple-600' },
-        { title: 'Gizi Baik (IMT/U)', value: `${stats.goodNutritionPercentage}%`, icon: FaChartBar, bg: 'bg-emerald-100', text: 'text-emerald-600' },
-        { title: 'Total Orang Tua', value: stats.totalParents, icon: FaUsers, bg: 'bg-blue-100', text: 'text-blue-600' },
-        { title: 'Artikel Edukasi', value: stats.totalArticles, icon: FaNewspaper, bg: 'bg-pink-100', text: 'text-pink-600' },
+    const statsProducts = [
+        {
+            title: 'Total Anak',
+            value: stats.totalChildren,
+            desc: 'Jiwa terdaftar',
+            icon: FaChild,
+            link: '/admin/monitoring',
+            color: 'bg-sage/10 text-sage',
+        },
+        {
+            title: 'Gizi Baik',
+            value: `${stats.goodNutritionPercentage}%`,
+            desc: 'Status optimal',
+            icon: FaChartBar,
+            link: '/admin/monitoring?status=good',
+            color: 'bg-moss/10 text-moss',
+        },
+        {
+            title: 'Orang Tua',
+            value: stats.totalParents,
+            desc: 'Wali aktif',
+            icon: FaUsers,
+            link: '/admin/users',
+            color: 'bg-tan/20 text-clay',
+        },
+        {
+            title: 'Edukasi',
+            value: stats.totalArticles,
+            desc: 'Artikel kesehatan',
+            icon: FaNewspaper,
+            link: '/admin/articles',
+            color: 'bg-cream-dark text-sage/70',
+        },
     ];
 
     return (
-        <div className="space-y-8 p-4 lg:p-0">
-            {/* GREETING & HEADER */}
-            <div>
-                <h1 className="text-2xl lg:text-3xl font-black text-gray-800 tracking-tight">Dashboard Puskesmas 🏥</h1>
-                <p className="text-gray-500 mt-1 font-medium text-sm lg:text-base">Monitoring gizi dan stunting real-time wilayah Anda.</p>
-            </div>
-
-            {/* STATS GRID */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {statsCards.map((stat, idx) => (
-                    <Card key={idx} className="border-none shadow-sm p-5 hover:scale-[1.03] transition-all duration-300">
-                        <div className={`w-12 h-12 rounded-2xl ${stat.bg} ${stat.text} flex items-center justify-center mb-4 shadow-inner`}>
-                            <stat.icon size={24} />
+        <div className="min-h-screen bg-cream pb-24">
+            <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-12 space-y-14">
+                {/* Hero Section */}
+                <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 border-b border-tan/20 pb-8">
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <span className="h-px w-8 bg-clay/40"></span>
+                            <span className="text-xs font-bold uppercase tracking-[0.3em] text-clay/60">
+                                Dashboard Puskesmas
+                            </span>
                         </div>
-                        <div className="text-2xl lg:text-3xl font-black text-gray-800 tracking-tighter">{stat.value}</div>
-                        <div className="text-[10px] lg:text-xs text-gray-400 font-black uppercase tracking-widest mt-1">{stat.title}</div>
-                    </Card>
-                ))}
-            </div>
+                        <h1 className="text-5xl md:text-7xl font-serif italic font-semibold text-moss tracking-tight leading-[1.2]">
+                            Ringkasan
+                            <br />
+                            <span className="text-clay/50">Kesehatan Ibu & Anak</span>
+                        </h1>
+                        <p className="text-moss/50 max-w-lg text-base leading-relaxed pt-2">
+                            Pantau status gizi, intervensi, dan kepatuhan orang tua dalam satu tampilan yang tenang dan terpercaya.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                        {/* UPDATE: Link Ekspor Laporan (Sudah Hijau Moss) */}
+                        <Link
+                            href="/admin/reports"
+                            className="group flex items-center gap-2 px-6 py-3 rounded-full bg-white border-2 border-[#1A2A1A]/10 text-[#1A2A1A] font-bold text-sm hover:bg-[#1A2A1A] hover:text-white hover:border-[#1A2A1A] transition-all duration-300 shadow-sm"
+                        >
+                            <FaFileDownload className="text-[#1A2A1A] group-hover:text-white group-hover:translate-y-0.5 transition-all" />
+                            <span>Ekspor Laporan</span>
+                        </Link>
+                    </div>
+                </header>
 
-            <div className="grid lg:grid-cols-3 gap-6">
-                {/* ALERTS SECTION (LEFT) */}
-                <div className="lg:col-span-2 space-y-6">
-                    <Card className="border-l-4 border-l-red-500 shadow-md p-6 bg-white">
-                        <div className="flex items-center justify-between mb-8">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-500 animate-pulse">
-                                    <FaExclamationTriangle size={24} />
-                                </div>
-                                <div>
-                                    <h2 className="text-lg lg:text-xl font-black text-gray-800">Prioritas Intervensi</h2>
-                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-tight">Anak berisiko Stunting & Wasting</p>
-                                </div>
-                            </div>
-                            <div className="bg-red-500 text-white px-4 py-1.5 rounded-full text-xs font-black shadow-lg shadow-red-200">
-                                {alerts.length} KASUS
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            {alerts.length === 0 ? (
-                                <div className="text-center py-16 text-gray-400 italic bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
-                                    <p className="text-lg">✨ Kondisi Wilayah Aman</p>
-                                    <p className="text-xs mt-1">Semua anak memiliki status gizi optimal.</p>
-                                </div>
-                            ) : (
-                                alerts.map((alert: any) => (
-                                    <div key={alert.id} className="group border border-gray-100 rounded-2xl p-5 bg-gray-50/30 hover:bg-red-50/40 hover:border-red-100 transition-all duration-300">
-                                        <div className="flex flex-col sm:flex-row justify-between gap-6">
-                                            <div className="space-y-2">
-                                                <div className="font-black text-gray-800 text-lg group-hover:text-red-700 transition-colors uppercase tracking-tight">{alert.name}</div>
-                                                <div className="flex flex-wrap items-center gap-3">
-                                                    <span className="text-[11px] bg-white px-2 py-1 rounded-md text-gray-500 font-bold border border-gray-200 shadow-sm">{alert.age}</span>
-                                                    <span className="text-[11px] text-gray-400 font-bold uppercase">Ortu: {alert.parent}</span>
-                                                </div>
-                                                <div className="inline-flex bg-red-600 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-sm">
-                                                    {alert.status}
-                                                </div>
-                                            </div>
-
-                                            <div className="flex flex-row sm:flex-col justify-end gap-2 shrink-0">
-                                                <button
-                                                    onClick={() => window.open(`https://wa.me/${alert.phone.replace(/[^0-9]/g, '')}`, '_blank')}
-                                                    className="flex-1 sm:flex-none bg-emerald-500 text-white px-6 py-3 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 hover:bg-emerald-600 active:scale-95 transition-all shadow-md shadow-emerald-100"
-                                                >
-                                                    <FaWhatsapp size={16} /> HUBUNGI WA
-                                                </button>
-                                                <Link
-                                                    href="/admin/monitoring"
-                                                    className="flex-1 sm:flex-none bg-white border-2 border-gray-200 text-gray-600 px-6 py-3 rounded-xl text-[11px] font-black flex items-center justify-center hover:border-purple-500 hover:text-purple-600 active:scale-95 transition-all shadow-sm"
-                                                >
-                                                    LIHAT DATA
-                                                </Link>
-                                            </div>
-                                        </div>
+                {/* Bento Grid Stat Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-fr">
+                    {statsProducts.map((stat, index) => (
+                        <Link key={index} href={stat.link}>
+                            <motion.div
+                                whileHover={{ y: -6 }}
+                                className="h-full bg-white rounded-4xl border border-tan/20 p-6 shadow-sm hover:bg-[#1A2A1A] hover:border-[#1A2A1A] transition-all duration-400 flex flex-col justify-between group"
+                            >
+                                <div className="flex justify-between items-start">
+                                    <div className={`p-3 rounded-2xl ${stat.color} group-hover:bg-white/10 group-hover:text-white transition-colors`}>
+                                        <stat.icon size={22} />
                                     </div>
-                                ))
-                            )}
-                        </div>
-                    </Card>
+                                    <div className="text-moss/20 group-hover:text-white/50 transition-colors">
+                                        <FaArrowRight size={14} />
+                                    </div>
+                                </div>
+                                <div className="mt-6">
+                                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-moss/40 group-hover:text-white/40 transition-colors">
+                                        {stat.title}
+                                    </p>
+                                    <p className="text-5xl font-serif italic font-black text-moss mt-1 leading-none group-hover:text-white transition-colors">
+                                        {stat.value}
+                                    </p>
+                                    <p className="text-sm text-moss/40 mt-2 group-hover:text-white/40 transition-colors">{stat.desc}</p>
+                                </div>
+                            </motion.div>
+                        </Link>
+                    ))}
                 </div>
 
-                {/* SIDEBAR ACTIONS (RIGHT) */}
-                <div className="space-y-6">
-                    <Card className="p-6 shadow-sm border-none bg-white">
-                        <h2 className="text-xs font-black text-gray-400 mb-6 uppercase tracking-[0.2em]">Navigasi Cepat</h2>
-                        <div className="grid grid-cols-1 gap-4">
-                            <Link href="/admin/articles/new" className="flex items-center gap-4 p-4 bg-pink-50 hover:bg-pink-100 rounded-2xl transition-all border border-pink-100 group">
-                                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-pink-600 shadow-sm group-hover:scale-110 group-hover:rotate-6 transition-transform">
-                                    <FaPlus size={18} />
-                                </div>
-                                <div className="text-xs font-black text-gray-800 uppercase tracking-tight">Tulis Artikel Baru</div>
-                            </Link>
-
-                            <Link href="/admin/monitoring" className="flex items-center gap-4 p-4 bg-blue-50 hover:bg-blue-100 rounded-2xl transition-all border border-blue-100 group">
-                                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-blue-600 shadow-sm group-hover:scale-110 group-hover:-rotate-6 transition-transform">
-                                    <FaEye size={18} />
-                                </div>
-                                <div className="text-xs font-black text-gray-800 uppercase tracking-tight">Cek Monitoring Detail</div>
-                            </Link>
-
-                            <Link href="/admin/reports" className="flex items-center gap-4 p-4 bg-purple-50 hover:bg-purple-100 rounded-2xl transition-all border border-purple-100 group">
-                                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-purple-600 shadow-sm group-hover:scale-110 transition-transform">
-                                    <FaNewspaper size={18} />
-                                </div>
-                                <div className="text-xs font-black text-gray-800 uppercase tracking-tight">Export Laporan Gizi</div>
-                            </Link>
-                        </div>
-                    </Card>
-
-                    {/* INFO BOX */}
-                    <Card className="bg-gradient-to-br from-indigo-600 to-purple-700 text-white p-6 border-none shadow-xl relative overflow-hidden">
-                        <div className="relative z-10">
-                            <div className="flex items-center gap-2 mb-4">
-                                <div className="w-2 h-2 bg-emerald-400 rounded-full animate-ping"></div>
-                                <h3 className="font-black text-[10px] uppercase tracking-[0.2em] text-indigo-100">Info Audit Medis</h3>
+                {/* Prioritas Intervensi + Sidebar */}
+                <div className="grid lg:grid-cols-3 gap-10">
+                    {/* Kolom prioritas intervensi (2/3) */}
+                    <div className="lg:col-span-2 space-y-8">
+                        <div className="flex items-center justify-between border-l-4 border-clay pl-5">
+                            <div>
+                                <h2 className="text-3xl font-serif italic text-moss">Prioritas Intervensi</h2>
+                                <p className="text-moss/40 text-sm mt-1">Anak dengan status gizi memerlukan perhatian segera</p>
                             </div>
-                            <p className="text-[11px] lg:text-xs text-indigo-50 leading-relaxed font-bold">
-                                Algoritma deteksi saat ini menggunakan standar baku <b>Z-Score WHO 2020</b>.
-                            </p>
-                            <p className="text-[10px] text-indigo-200 mt-2 italic">
-                                *Status Stunting didasarkan pada indikator Tinggi Badan menurut Umur (TB/U).
-                            </p>
+                            <span className="px-4 py-1.5 rounded-full bg-clay/10 text-clay text-xs font-bold uppercase tracking-wider border border-clay/20">
+                                {alerts.length} Perlu Tindakan
+                            </span>
                         </div>
-                        <FaBaby size={100} className="absolute -right-6 -bottom-6 text-white opacity-10 rotate-12" />
-                    </Card>
+
+                        {alerts.length === 0 ? (
+                            <div className="p-12 text-center rounded-5xl bg-sage/5 border border-sage/10">
+                                <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-5 shadow-sm">
+                                    <FaSeedling className="text-sage text-3xl" />
+                                </div>
+                                <h3 className="text-xl font-serif italic font-semibold text-moss">Wilayah Terkendali</h3>
+                                <p className="text-moss/40 text-sm max-w-xs mx-auto mt-1">
+                                    Semua anak dalam status gizi optimal. Tetap pantau secara berkala.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="grid gap-5">
+                                {alerts.map((alert: any, idx: number) => {
+                                    const statusColor = getStatusColor(alert.status);
+                                    return (
+                                        <motion.div
+                                            key={alert.id}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: idx * 0.05 }}
+                                            className="group p-5 rounded-3xl bg-white border border-tan/20 hover:bg-[#1A2A1A] hover:border-[#1A2A1A] hover:shadow-lg transition-all duration-300 flex flex-col sm:flex-row justify-between items-center gap-4 cursor-pointer"
+                                        >
+                                            <div className="flex items-center gap-4 w-full">
+                                                <div className="w-12 h-12 rounded-full bg-sage/10 flex items-center justify-center text-clay font-serif italic text-xl font-bold group-hover:bg-white/10 group-hover:text-white transition-colors">
+                                                    {alert.name.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-moss text-lg group-hover:text-white transition-colors">{alert.name}</h4>
+                                                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-moss/50 group-hover:text-white/40 transition-colors">
+                                                        <span>{alert.age}</span>
+                                                        <span className="w-1 h-1 rounded-full bg-moss/30 group-hover:bg-white/20 self-center"></span>
+                                                        <span>Ortu: {alert.parent}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3 w-full sm:w-auto">
+                                                <span
+                                                    className={`px-3 py-1.5 rounded-full text-[11px] font-bold uppercase border transition-all duration-300 ${statusColor.bg} ${statusColor.text} ${statusColor.border} group-hover:bg-white group-hover:text-[#1A2A1A] group-hover:border-white`}
+                                                >
+                                                    {alert.status}
+                                                </span>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        window.open(`https://wa.me/${alert.phone.replace(/[^0-9]/g, '')}`, '_blank');
+                                                    }}
+                                                    className="p-3 rounded-full bg-clay text-white hover:bg-clay/80 transition-all shadow-md shadow-clay/20 group-hover:bg-white group-hover:text-[#1A2A1A]"
+                                                >
+                                                    <FaWhatsapp size={16} />
+                                                </button>
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Sidebar Kanan - Akses Cepat */}
+                    <div className="space-y-8">
+                        <div className="p-9 rounded-[40px] bg-[#1A2A1A] text-white shadow-2xl shadow-moss/30 relative overflow-hidden border border-white/10">
+                            <div className="absolute top-0 right-0 w-40 h-40 bg-clay/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+                            <div className="relative z-10">
+                                <h3 className="text-2xl font-serif italic mb-7 flex items-center gap-2.5 px-2">
+                                    <FaHeartbeat className="text-clay text-xl" /> Akses Cepat
+                                </h3>
+                                <div className="space-y-4">
+                                    <Link
+                                        href="/admin/articles/new"
+                                        className="flex items-center justify-between p-4.5 px-6 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 transition-all group backdrop-blur-sm"
+                                    >
+                                        <span className="text-sm font-semibold text-white">Tulis Artikel Edukasi</span>
+                                        <FaPlus size={14} className="text-clay group-hover:rotate-90 transition" />
+                                    </Link>
+                                    <Link
+                                        href="/admin/monitoring"
+                                        className="flex items-center justify-between p-4.5 px-6 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 transition-all group backdrop-blur-sm"
+                                    >
+                                        <span className="text-sm font-semibold text-white">Detail Monitoring Anak</span>
+                                        <FaEye size={14} className="text-clay group-hover:scale-110 transition" />
+                                    </Link>
+                                    <Link
+                                        href="/admin/pregnancy"
+                                        className="flex items-center justify-between p-4.5 px-6 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 transition-all group backdrop-blur-sm"
+                                    >
+                                        <span className="text-sm font-semibold text-white">Data Ibu Hamil</span>
+                                        <FaBaby size={14} className="text-clay group-hover:scale-110 transition" />
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Catatan medis (Non-Clickable tetap putih untuk kontras) */}
+                        <div className="p-8 rounded-5xl bg-white border border-tan/30 shadow-sm">
+                            <div className="flex gap-4">
+                                <div className="p-3 rounded-2xl bg-clay/10 text-clay h-fit">
+                                    <FaExclamationTriangle size={20} />
+                                </div>
+                                <div>
+                                    <h4 className="text-xs font-black uppercase tracking-wider text-moss/40 mb-1">
+                                        Standar WHO 2020
+                                    </h4>
+                                    <p className="text-sm text-moss/60 leading-relaxed">
+                                        Deteksi otomatis menggunakan <span className="font-bold text-moss">Z-Score</span>. Pastikan data
+                                        berat dan tinggi badan diperbarui setiap bulan untuk akurasi intervensi.
+                                    </p>
+                                    <div className="mt-4 pt-3 border-t border-tan/20 flex items-center justify-between">
+                                        <span className="text-[11px] font-mono text-clay/60">Update terakhir: hari ini</span>
+                                        <FaSeedling className="text-sage/30 text-xs" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="pt-6 text-center text-xs text-moss/30 border-t border-tan/20">
+                    <span>© 2026 • Sistem Pemantauan Gizi Puskesmas • Data real-time berdasarkan input petugas</span>
                 </div>
             </div>
         </div>
-    )
+    );
 }

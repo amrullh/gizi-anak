@@ -1,395 +1,155 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { usePregnancy } from '@/hooks/usePregnancy';
-import Button from '@/components/ui/Button';
-import Card from '@/components/ui/Card';
+import { useState } from 'react'
+import { useAuth } from '@/context/AuthContext'
+import { usePregnancy } from '@/hooks/usePregnancy'
+import { calculateGestationalAge } from '@/utils/pregnancy'
+import Card from '@/components/ui/Card'
+import Button from '@/components/ui/Button'
+import { FaCalendarAlt, FaCapsules, FaClock, FaCheckCircle, FaSpinner, FaBaby } from 'react-icons/fa'
 
-export default function PregnancyPage() {
-    const { user, updateUser } = useAuth();
-    const { pregnancy, loading, savePregnancy } = usePregnancy();
-    const router = useRouter();
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isPregnant, setIsPregnant] = useState(false);
+export default function ParentPregnancyPage() {
+    const { user } = useAuth()
+    const { pregnancy, loading, savePregnancy } = usePregnancy()
+    const [updating, setUpdating] = useState(false)
 
-    // Form untuk data ibu & gizi (wajib)
-    const [ibuForm, setIbuForm] = useState({
-        ttl: '',
-        beratBadan: '',
-        tinggiBadan: '',
-        hb: '',
-        lila: '',
-    });
-
-    // Form untuk data kehamilan (opsional)
-    const [hamilForm, setHamilForm] = useState({
-        kehamilanKe: '1',
-        jumlahAnakHidup: '0',
-        pernahAbortus: false,
-        abortusAnakKe: '',
-        hpht: '',
-        taksiranPersalinan: '',
-        umurKehamilanMinggu: '',
-        keluhanTrimester1: '',
-        keluhanTrimester2: '',
-        keluhanTrimester3: '',
-    });
-
-    // Load data user jika sudah ada
-    useEffect(() => {
-        if (user) {
-            setIbuForm({
-                ttl: user.ttl || '',
-                beratBadan: user.beratBadan?.toString() || '',
-                tinggiBadan: user.tinggiBadan?.toString() || '',
-                hb: user.hb?.toString() || '',
-                lila: user.lila?.toString() || '',
-            });
-            setIsPregnant(user.isPregnant || false);
-        }
-    }, [user]);
-
-    // Load data kehamilan jika sudah ada
-    useEffect(() => {
-        if (pregnancy) {
-            setHamilForm({
-                kehamilanKe: pregnancy.kehamilanKe?.toString() || '1',
-                jumlahAnakHidup: pregnancy.jumlahAnakHidup?.toString() || '0',
-                pernahAbortus: pregnancy.pernahAbortus || false,
-                abortusAnakKe: pregnancy.abortusAnakKe?.toString() || '',
-                hpht: pregnancy.hpht?.toISOString().split('T')[0] || '',
-                taksiranPersalinan: pregnancy.taksiranPersalinan?.toISOString().split('T')[0] || '',
-                umurKehamilanMinggu: pregnancy.umurKehamilanMinggu?.toString() || '',
-                keluhanTrimester1: pregnancy.keluhanTrimester1 || '',
-                keluhanTrimester2: pregnancy.keluhanTrimester2 || '',
-                keluhanTrimester3: pregnancy.keluhanTrimester3 || '',
-            });
-        }
-    }, [pregnancy]);
-
-    const handleIbuChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setIbuForm(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleHamilChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value, type } = e.target;
-        const checked = (e.target as HTMLInputElement).checked;
-        setHamilForm(prev => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value,
-        }));
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-
-        try {
-            // Validasi data ibu & gizi (wajib)
-            if (!ibuForm.beratBadan || !ibuForm.tinggiBadan) {
-                alert('Berat badan dan tinggi badan wajib diisi');
-                setIsSubmitting(false);
-                return;
-            }
-
-            // Update data user
-            await updateUser({
-                ttl: ibuForm.ttl || undefined,
-                beratBadan: parseFloat(ibuForm.beratBadan),
-                tinggiBadan: parseFloat(ibuForm.tinggiBadan),
-                hb: ibuForm.hb ? parseFloat(ibuForm.hb) : undefined,
-                lila: ibuForm.lila ? parseFloat(ibuForm.lila) : undefined,
-                isPregnant,
-            });
-
-            // Jika hamil, simpan data kehamilan
-            if (isPregnant) {
-                // Validasi data kehamilan (wajib jika hamil)
-                if (!hamilForm.hpht || !hamilForm.taksiranPersalinan || !hamilForm.umurKehamilanMinggu) {
-                    alert('Data HPHT, taksiran persalinan, dan umur kehamilan wajib diisi jika hamil');
-                    setIsSubmitting(false);
-                    return;
-                }
-
-                await savePregnancy({
-                    isPregnant: true,
-                    pemeriksaanTanggal: new Date(),
-                    nama: user?.name || '',
-                    umur: 0, // atau dari form jika ada
-                    beratBadan: parseFloat(ibuForm.beratBadan),
-                    tinggiBadan: parseFloat(ibuForm.tinggiBadan),
-                    kehamilanKe: parseInt(hamilForm.kehamilanKe),
-                    jumlahAnakHidup: parseInt(hamilForm.jumlahAnakHidup),
-                    pernahAbortus: hamilForm.pernahAbortus,
-                    abortusAnakKe: hamilForm.abortusAnakKe ? parseInt(hamilForm.abortusAnakKe) : undefined,
-                    hpht: new Date(hamilForm.hpht),
-                    taksiranPersalinan: new Date(hamilForm.taksiranPersalinan),
-                    umurKehamilanMinggu: parseInt(hamilForm.umurKehamilanMinggu),
-                    keluhanTrimester1: hamilForm.keluhanTrimester1 || undefined,
-                    keluhanTrimester2: hamilForm.keluhanTrimester2 || undefined,
-                    keluhanTrimester3: hamilForm.keluhanTrimester3 || undefined,
-                });
-            }
-
-            router.push('/parent/dashboard');
-        } catch (error) {
-            console.error(error);
-            alert('Gagal menyimpan data');
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
-            </div>
-        );
+    const formatDate = (date: any) => {
+        if (!date) return '-'
+        const d = date.toDate ? date.toDate() : new Date(date)
+        return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
     }
 
+    const handleAddPill = async () => {
+        if (!pregnancy || updating) return
+        setUpdating(true)
+        try {
+            const currentProgress = pregnancy.pillProgress || 0
+            if (currentProgress >= 90) {
+                alert("Anda sudah menyelesaikan target 90 hari konsumsi pil.")
+                return
+            }
+
+            // REVISI: Destructuring untuk memisahkan field sistem (id, userId, dll)
+            // agar payload sesuai dengan tipe Omit<PregnancyData, 'id' | 'userId' | ...>
+            //
+            const { id, userId, createdAt, updatedAt, ...cleanData } = pregnancy;
+
+            // savePregnancy mengupdate field ke Firebase berdasarkan effectiveUserId di hook
+            //
+            await savePregnancy({
+                ...cleanData,
+                pillProgress: currentProgress + 1
+            } as any)
+
+            alert("Berhasil! Tetap semangat menjaga kesehatan janin.")
+        } catch (error) {
+            console.error("Gagal update pil:", error)
+            alert("Gagal memperbarui data. Silakan coba lagi.")
+        } finally {
+            setUpdating(false)
+        }
+    }
+
+    if (loading) return (
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <FaSpinner className="animate-spin text-pink-500" size={32} />
+            <p className="text-gray-400 font-bold uppercase text-xs">Memuat Data Kehamilan...</p>
+        </div>
+    )
+
+    if (!pregnancy) return (
+        <div className="py-10">
+            <Card className="p-8 text-center bg-white border-2 border-dashed">
+                <FaBaby size={48} className="mx-auto text-gray-200 mb-4" />
+                <h2 className="text-xl font-black text-gray-800 uppercase">Belum Ada Data</h2>
+                <p className="text-sm text-gray-500 mt-2">Data kehamilan Anda belum didaftarkan oleh petugas kesehatan atau bidan.</p>
+            </Card>
+        </div>
+    )
+
+    // Gunakan utilitas hitung usia kehamilan berdasarkan HPHT
+    const ageData = calculateGestationalAge(pregnancy.hpht || new Date())
+
     return (
-        <div className="min-h-screen bg-gray-50 py-8 px-4">
-            <div className="max-w-3xl mx-auto">
-                <h1 className="text-3xl font-bold text-gray-800 mb-2">Lengkapi Data Diri</h1>
-                <p className="text-gray-600 mb-8">Isi data diri dan asesmen gizi Anda</p>
+        <div className="space-y-6 pb-10">
+            <header>
+                <h1 className="text-2xl font-black text-gray-800 leading-none">Pantau Kehamilan</h1>
+                <p className="text-gray-500 text-sm mt-2">Update harian kondisi Bunda dan Si Kecil.</p>
+            </header>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Data Ibu (wajib) */}
-                    <Card>
-                        <h2 className="text-xl font-semibold mb-4">Data Ibu</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="md:col-span-2">
-                                <label className="block text-sm font-medium mb-1">Tempat, Tanggal Lahir (opsional)</label>
-                                <input
-                                    type="text"
-                                    name="ttl"
-                                    value={ibuForm.ttl}
-                                    onChange={handleIbuChange}
-                                    placeholder="Contoh: Jakarta, 1 Januari 1990"
-                                    className="input-field"
-                                />
-                            </div>
-                        </div>
-                    </Card>
-
-                    {/* Asesmen Gizi (wajib) */}
-                    <Card>
-                        <h2 className="text-xl font-semibold mb-4">Asesmen Gizi Ibu</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Berat Badan (kg) *</label>
-                                <input
-                                    type="number"
-                                    name="beratBadan"
-                                    value={ibuForm.beratBadan}
-                                    onChange={handleIbuChange}
-                                    step="0.1"
-                                    className="input-field"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Tinggi Badan (cm) *</label>
-                                <input
-                                    type="number"
-                                    name="tinggiBadan"
-                                    value={ibuForm.tinggiBadan}
-                                    onChange={handleIbuChange}
-                                    className="input-field"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Pemeriksaan Hb (g/dL)</label>
-                                <input
-                                    type="number"
-                                    name="hb"
-                                    value={ibuForm.hb}
-                                    onChange={handleIbuChange}
-                                    step="0.1"
-                                    className="input-field"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">LILA (cm)</label>
-                                <input
-                                    type="number"
-                                    name="lila"
-                                    value={ibuForm.lila}
-                                    onChange={handleIbuChange}
-                                    step="0.1"
-                                    className="input-field"
-                                />
-                            </div>
-                        </div>
-                    </Card>
-
-                    {/* Checkbox Hamil */}
-                    <Card>
-                        <label className="flex items-center space-x-3 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={isPregnant}
-                                onChange={(e) => setIsPregnant(e.target.checked)}
-                                className="w-5 h-5 text-pink-500 rounded focus:ring-pink-500"
-                            />
-                            <span className="text-gray-700 font-medium">Saya sedang hamil</span>
-                        </label>
-                    </Card>
-
-                    {/* Data Kehamilan (opsional, muncul jika hamil) */}
-                    {isPregnant && (
-                        <>
-                            <Card>
-                                <h2 className="text-xl font-semibold mb-4">Data Kehamilan</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Kehamilan ke-</label>
-                                        <input
-                                            type="number"
-                                            name="kehamilanKe"
-                                            value={hamilForm.kehamilanKe}
-                                            onChange={handleHamilChange}
-                                            min="1"
-                                            className="input-field"
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Jumlah Anak Hidup</label>
-                                        <input
-                                            type="number"
-                                            name="jumlahAnakHidup"
-                                            value={hamilForm.jumlahAnakHidup}
-                                            onChange={handleHamilChange}
-                                            min="0"
-                                            className="input-field"
-                                            required
-                                        />
-                                    </div>
-                                    <div className="md:col-span-2">
-                                        <div className="flex items-center gap-4">
-                                            <label className="flex items-center">
-                                                <input
-                                                    type="checkbox"
-                                                    name="pernahAbortus"
-                                                    checked={hamilForm.pernahAbortus}
-                                                    onChange={handleHamilChange}
-                                                    className="mr-2 rounded"
-                                                />
-                                                Pernah Abortus
-                                            </label>
-                                            {hamilForm.pernahAbortus && (
-                                                <div className="flex-1">
-                                                    <input
-                                                        type="number"
-                                                        name="abortusAnakKe"
-                                                        value={hamilForm.abortusAnakKe}
-                                                        onChange={handleHamilChange}
-                                                        placeholder="Anak ke-"
-                                                        className="input-field"
-                                                        required
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </Card>
-
-                            <Card>
-                                <h2 className="text-xl font-semibold mb-4">HPHT & Taksiran Persalinan</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Hari Pertama Haid Terakhir (HPHT) *</label>
-                                        <input
-                                            type="date"
-                                            name="hpht"
-                                            value={hamilForm.hpht}
-                                            onChange={handleHamilChange}
-                                            className="input-field"
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Taksiran Persalinan *</label>
-                                        <input
-                                            type="date"
-                                            name="taksiranPersalinan"
-                                            value={hamilForm.taksiranPersalinan}
-                                            onChange={handleHamilChange}
-                                            className="input-field"
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Umur Kehamilan (minggu) *</label>
-                                        <input
-                                            type="number"
-                                            name="umurKehamilanMinggu"
-                                            value={hamilForm.umurKehamilanMinggu}
-                                            onChange={handleHamilChange}
-                                            min="1"
-                                            max="42"
-                                            className="input-field"
-                                            required
-                                        />
-                                    </div>
-                                </div>
-                            </Card>
-
-                            <Card>
-                                <h2 className="text-xl font-semibold mb-4">Keluhan Selama Kehamilan (opsional)</h2>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Trimester I</label>
-                                        <textarea
-                                            name="keluhanTrimester1"
-                                            value={hamilForm.keluhanTrimester1}
-                                            onChange={handleHamilChange}
-                                            rows={2}
-                                            className="input-field"
-                                            placeholder="Contoh: Mual, muntah"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Trimester II</label>
-                                        <textarea
-                                            name="keluhanTrimester2"
-                                            value={hamilForm.keluhanTrimester2}
-                                            onChange={handleHamilChange}
-                                            rows={2}
-                                            className="input-field"
-                                            placeholder="Contoh: Sakit punggung"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Trimester III</label>
-                                        <textarea
-                                            name="keluhanTrimester3"
-                                            value={hamilForm.keluhanTrimester3}
-                                            onChange={handleHamilChange}
-                                            rows={2}
-                                            className="input-field"
-                                            placeholder="Contoh: Sesak napas"
-                                        />
-                                    </div>
-                                </div>
-                            </Card>
-                        </>
-                    )}
-
-                    <div className="flex justify-end">
-                        <button type="submit" disabled={isSubmitting} className="px-6 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 disabled:opacity-50">
-                            {isSubmitting ? 'Menyimpan...' : 'Simpan Data'}
-                        </button>
+            {/* Card Usia Kehamilan */}
+            <Card className="p-6 bg-gradient-to-br from-pink-500 to-rose-400 text-white border-none shadow-lg shadow-pink-100">
+                <div className="flex justify-between items-start">
+                    <div>
+                        <p className="text-pink-100 text-[10px] font-black uppercase tracking-widest">Usia Kehamilan Saat Ini</p>
+                        <h2 className="text-5xl font-black mt-2">{ageData.weeks}<span className="text-xl font-medium ml-2">Minggu</span></h2>
+                        <p className="text-pink-100 text-sm font-bold mt-1">{ageData.days} Hari</p>
                     </div>
-                </form>
+                    <FaClock className="text-4xl opacity-30 mt-2" />
+                </div>
+            </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Card Prediksi Persalinan (HPL) */}
+                <Card className="p-5 flex items-center gap-4">
+                    <div className="w-12 h-12 bg-pink-50 rounded-2xl flex items-center justify-center text-pink-500">
+                        <FaCalendarAlt size={22} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Prediksi Persalinan (HPL)</p>
+                        <p className="font-bold text-gray-800">{formatDate(pregnancy.taksiranPersalinan)}</p>
+                    </div>
+                </Card>
+
+                {/* Card HPHT */}
+                <Card className="p-5 flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400">
+                        <FaClock size={20} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Tanggal HPHT</p>
+                        <p className="font-bold text-gray-800">{formatDate(pregnancy.hpht)}</p>
+                    </div>
+                </Card>
+            </div>
+
+            {/* Monitoring Pil Fe (Zat Besi) */}
+            <Card className="p-6 border-t-4 border-t-purple-500">
+                <div className="flex justify-between items-center mb-6">
+                    <div className="flex items-center gap-2">
+                        <FaCapsules className="text-purple-500" />
+                        <h3 className="font-black text-gray-800 text-sm uppercase">Konsumsi Pil Fe (Target 90)</h3>
+                    </div>
+                    <span className="text-lg font-black text-purple-600">{pregnancy.pillProgress || 0}/90</span>
+                </div>
+
+                <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden mb-6">
+                    <div
+                        className="bg-purple-500 h-full transition-all duration-700"
+                        style={{ width: `${((pregnancy.pillProgress || 0) / 90) * 100}%` }}
+                    />
+                </div>
+
+                <Button
+                    fullWidth
+                    className="h-16 bg-purple-600 text-white font-black rounded-2xl shadow-xl shadow-purple-100 active:scale-95 transition-transform"
+                    onClick={handleAddPill}
+                    disabled={updating}
+                >
+                    {updating ? <FaSpinner className="animate-spin" /> : (
+                        <div className="flex flex-col items-center">
+                            <span className="flex items-center gap-2"><FaCheckCircle /> SAYA SUDAH MINUM PIL</span>
+                            <span className="text-[8px] opacity-70 font-normal">Klik untuk menambah progres harian</span>
+                        </div>
+                    )}
+                </Button>
+            </Card>
+
+            <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
+                <p className="text-[10px] text-blue-600 leading-relaxed italic">
+                    * Konsumsi pil zat besi secara teratur sangat penting untuk mencegah anemia pada Bunda dan mendukung perkembangan otak Si Kecil.
+                </p>
             </div>
         </div>
-    );
+    )
 }

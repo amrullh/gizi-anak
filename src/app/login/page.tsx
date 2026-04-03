@@ -6,13 +6,12 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 
 export default function LoginPage() {
-    const [email, setEmail] = useState('')
+    const [phone, setPhone] = useState('') // Mengganti email menjadi phone
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
-    const { login, user } = useAuth() // ambil user dari context
+    const { login, user } = useAuth()
     const router = useRouter()
 
-    // Redirect ketika user sudah terisi (login sukses)
     useEffect(() => {
         if (user) {
             if (user.role === 'parent') {
@@ -27,10 +26,10 @@ export default function LoginPage() {
         e.preventDefault()
         setError('')
         try {
-            await login(email, password)
-            // redirect akan di-handle oleh useEffect di atas
+            // Mengirim nomor HP ke fungsi login (konversi email dilakukan di AuthContext)
+            await login(phone, password)
         } catch (err: any) {
-            setError(err.message)
+            setError('Nomor WhatsApp atau password salah')
         }
     }
 
@@ -50,13 +49,13 @@ export default function LoginPage() {
                     )}
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>
-                            <label className="block text-sm font-medium mb-2">Email</label>
+                            <label className="block text-sm font-medium mb-2">Nomor WhatsApp</label>
                             <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                                placeholder="nama@email.com"
+                                type="tel"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none"
+                                placeholder="Contoh: 08123456789"
                                 required
                             />
                         </div>
@@ -67,7 +66,7 @@ export default function LoginPage() {
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none"
                                 placeholder="••••••••"
                                 required
                             />
@@ -75,7 +74,7 @@ export default function LoginPage() {
 
                         <div className="flex items-center justify-between">
                             <div className="flex items-center">
-                                <input type="checkbox" className="h-4 w-4 text-pink-500 rounded" />
+                                <input type="checkbox" className="h-4 w-4 text-pink-500 rounded focus:ring-pink-500" />
                                 <label className="ml-2 text-sm text-gray-600">Ingat saya</label>
                             </div>
                             <Link href="#" className="text-sm text-pink-500 hover:underline">
@@ -85,7 +84,7 @@ export default function LoginPage() {
 
                         <button
                             type="submit"
-                            className="w-full bg-pink-500 text-white p-3 rounded-lg hover:bg-pink-600 transition font-medium"
+                            className="w-full bg-pink-500 text-white p-3 rounded-lg hover:bg-pink-600 transition font-medium shadow-sm"
                         >
                             Login
                         </button>
@@ -100,21 +99,20 @@ export default function LoginPage() {
                         </p>
                     </div>
 
-                    {/* Role Selector untuk testing */}
                     <div className="mt-8 pt-6 border-t">
-                        <p className="text-sm text-gray-600 mb-3">Login sebagai (testing):</p>
+                        <p className="text-sm text-gray-600 mb-3 text-center">Login Cepat (Testing):</p>
                         <div className="grid grid-cols-2 gap-3">
                             <Link
                                 href="/parent/dashboard"
-                                className="bg-pink-50 text-pink-700 p-3 rounded-lg text-center hover:bg-pink-100"
+                                className="bg-pink-50 text-pink-700 p-2 rounded-lg text-center hover:bg-pink-100 text-xs font-bold"
                             >
                                 👨‍👩‍👧 Orang Tua
                             </Link>
                             <Link
                                 href="/admin/dashboard"
-                                className="bg-purple-50 text-purple-700 p-3 rounded-lg text-center hover:bg-purple-100"
+                                className="bg-purple-50 text-purple-700 p-2 rounded-lg text-center hover:bg-purple-100 text-xs font-bold"
                             >
-                                🏥 Admin Puskesmas
+                                🏥 Admin
                             </Link>
                         </div>
                     </div>

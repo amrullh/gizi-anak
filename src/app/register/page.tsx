@@ -8,9 +8,8 @@ import { useAuth } from '@/context/AuthContext'
 export default function RegisterPage() {
     const [form, setForm] = useState({
         name: '',
-        email: '',
+        phone: '', // Mengganti email menjadi phone
         password: '',
-        // Role dikunci secara default sebagai 'parent'
         role: 'parent'
     })
     const [error, setError] = useState('')
@@ -25,8 +24,8 @@ export default function RegisterPage() {
         setIsLoading(true)
 
         try {
-            // Mengirim data form termasuk role 'parent' yang sudah di-set di awal
-            await register(form.email, form.password, form.name, form.role)
+            // Mengirim nomor telepon ke fungsi register yang sudah diperbarui di AuthContext
+            await register(form.phone, form.password, form.name, form.role)
             router.push('/login?registered=true')
         } catch (err: any) {
             setError(err.message || 'Terjadi kesalahan saat mendaftar')
@@ -64,13 +63,13 @@ export default function RegisterPage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Nomor WhatsApp</label>
                             <input
-                                type="email"
-                                value={form.email}
-                                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                                type="tel"
+                                value={form.phone}
+                                onChange={(e) => setForm({ ...form, phone: e.target.value })}
                                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition"
-                                placeholder="nama@email.com"
+                                placeholder="Contoh: 08123456789"
                                 required
                             />
                         </div>
@@ -98,18 +97,14 @@ export default function RegisterPage() {
                                 />
                             </div>
                             <label htmlFor="terms" className="ml-2 text-sm text-gray-600">
-                                Saya menyetujui{' '}
-                                <Link href="/terms" className="text-pink-500 hover:underline font-medium">
-                                    Syarat & Ketentuan
-                                </Link>
+                                Saya menyetujui Syarat & Ketentuan
                             </label>
                         </div>
 
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className={`w-full bg-pink-500 text-white p-3 rounded-lg hover:bg-pink-600 transition font-semibold shadow-sm ${isLoading ? 'opacity-70 cursor-not-allowed' : ''
-                                }`}
+                            className={`w-full bg-pink-500 text-white p-3 rounded-lg hover:bg-pink-600 transition font-semibold shadow-sm ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
                         >
                             {isLoading ? 'Memproses...' : 'Daftar Sekarang'}
                         </button>

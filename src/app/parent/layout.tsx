@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { FaBook, FaChartBar, FaPlusCircle, FaBell, FaExclamationTriangle, FaPhoneAlt } from 'react-icons/fa'
+import { FaBook, FaChartBar, FaPlusCircle, FaBell, FaExclamationTriangle, FaPhoneAlt, FaBaby } from 'react-icons/fa'
 import { useAuth } from '@/context/AuthContext'
 import { useChildren } from '@/hooks/useChildren'
 import { useAllGrowthRecords } from '@/hooks/useAllGrowthRecords'
@@ -39,7 +39,6 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
                 if (childRecords.length > 0) {
                     const latest = [...childRecords].sort((a, b) => b.date.getTime() - a.date.getTime())[0]
 
-                    // FIX: Penanganan Tanggal yang aman untuk TypeScript & Vercel
                     const birthDateRaw = child.birthDate as any;
                     const birthDate = birthDateRaw?.seconds
                         ? new Date(birthDateRaw.seconds * 1000)
@@ -204,14 +203,17 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
             <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-gray-100 z-50">
                 <div className="max-w-5xl mx-auto px-6 py-2 flex justify-between items-center relative">
                     <Link href="/parent/articles" className={`flex flex-col items-center py-2 px-4 ${pathname === '/parent/articles' ? 'text-pink-500' : 'text-gray-400'}`}>
-                        <FaBook size={22} /><span className="text-[10px] font-bold mt-1 uppercase">Edukasi</span>
+                        <FaBook size={20} /><span className="text-[10px] font-bold mt-1 uppercase">Edukasi</span>
                     </Link>
-                    <Link href="/parent/dashboard" className="flex flex-col items-center -mt-10">
-                        <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all ${pathname === '/parent/dashboard' ? 'bg-pink-500 text-white' : 'bg-white text-gray-400 border'}`}>
-                            <FaChartBar size={24} />
-                        </div>
-                        <span className={`text-[10px] font-black mt-2 uppercase ${pathname === '/parent/dashboard' ? 'text-pink-600' : 'text-gray-400'}`}>Laporan</span>
+
+                    <Link href="/parent/pregnancy" className={`flex flex-col items-center py-2 px-4 ${pathname === '/parent/pregnancy' ? 'text-pink-500' : 'text-gray-400'}`}>
+                        <FaBaby size={22} /><span className="text-[10px] font-bold mt-1 uppercase">Kehamilan</span>
                     </Link>
+
+                    <Link href="/parent/dashboard" className={`flex flex-col items-center py-2 px-4 ${pathname === '/parent/dashboard' ? 'text-pink-500' : 'text-gray-400'}`}>
+                        <FaChartBar size={22} /><span className="text-[10px] font-bold mt-1 uppercase">Laporan</span>
+                    </Link>
+
                     <Link href="/parent/input" className={`flex flex-col items-center py-2 px-4 ${pathname === '/parent/input' ? 'text-pink-500' : 'text-gray-400'}`}>
                         <FaPlusCircle size={22} /><span className="text-[10px] font-bold mt-1 uppercase">Input</span>
                     </Link>

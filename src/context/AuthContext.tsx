@@ -8,32 +8,33 @@ import {
     createUserWithEmailAndPassword,
     signOut
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
 
+// Interface User disesuaikan dengan kebutuhan data Puskesmas
 interface User {
     uid: string;
     email: string | null;
     name?: string;
-    role?: 'parent' | 'admin';
+    role?: 'parent' | 'admin' | 'bidan';
     phone?: string;
     address?: string;
-    // Data ibu & gizi (wajib)
-    ttl?: string; // tempat, tanggal lahir
+    ttl?: string;
     beratBadan?: number;
     tinggiBadan?: number;
     hb?: number;
     age?: number;
     lila?: number;
-    // Status kehamilan (opsional)
     isPregnant?: boolean;
+    wilayah?: string; // Untuk klasifikasi wilayah kerja
 }
 
 interface AuthContextType {
     user: User | null;
     loading: boolean;
-    login: (email: string, password: string) => Promise<void>;
-    register: (email: string, password: string, name: string, role: string) => Promise<void>;
+    login: (phone: string, password: string) => Promise<void>;
+    register: (phone: string, password: string, name: string, role: string) => Promise<void>;
+    registerByAdmin: (phone: string, password: string, name: string, role: string, wilayah?: string) => Promise<string>;
     logout: () => Promise<void>;
     updateUser: (data: Partial<User>) => Promise<void>;
 }
@@ -43,6 +44,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+
+    // Helper untuk mengubah nomor telepon menjadi format email Firebase
+    const formatEmail = (phone: string) => `${phone.trim()}@gizianak.local`;
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -54,19 +58,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         setUser({
                             uid: firebaseUser.uid,
                             email: firebaseUser.email,
-                            name: userData.name,
-                            role: userData.role,
-                            phone: userData.phone,
-                            address: userData.address,
-                            ttl: userData.ttl,
-                            beratBadan: userData.beratBadan,
-                            tinggiBadan: userData.tinggiBadan,
-                            hb: userData.hb,
-                            lila: userData.lila,
-                            isPregnant: userData.isPregnant,
-                        });
+                            ...userData
+                        } as User);
                     } else {
-                        console.warn('Dokumen user tidak ditemukan di Firestore');
                         setUser({
                             uid: firebaseUser.uid,
                             email: firebaseUser.email,
@@ -86,18 +80,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return unsubscribe;
     }, []);
 
-    const login = async (email: string, password: string) => {
+    const login = async (phone: string, password: string) => {
+        const email = formatEmail(phone);
         await signInWithEmailAndPassword(auth, email, password);
     };
 
-    const register = async (email: string, password: string, name: string, role: string) => {
+    const register = async (phone: string, password: string, name: string, role: string) => {
+        const email = formatEmail(phone);
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
         await setDoc(doc(db, 'users', userCredential.user.uid), {
             name,
-            email,
+            phone,
+            email, // Email virtual untuk sistem
             role,
-            createdAt: new Date(),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
         });
+    };
+
+    /**
+     * Mendaftarkan user melalui API (Firebase Admin SDK) 
+     * agar Admin tidak otomatis logout/ter-switch akunnya.
+     */
+    const registerByAdmin = async (phone: string, password: string, name: string, role: string, wilayah?: string) => {
+        const email = formatEmail(phone);
+
+        const response = await fetch('/api/admin/create-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email,
+                password,
+                name,
+                role,
+                phone,
+                wilayah
+            }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Gagal mendaftarkan user');
+
+        return data.uid;
     };
 
     const logout = async () => {
@@ -105,13 +130,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const updateUser = async (data: Partial<User>) => {
-        if (!user) throw new Error('No user');
-        await updateDoc(doc(db, 'users', user.uid), data);
+        if (!user) throw new Error('No user authenticated');
+        await updateDoc(doc(db, 'users', user.uid), {
+            ...data,
+            updatedAt: serverTimestamp(),
+        });
         setUser(prev => prev ? { ...prev, ...data } : null);
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser }}>
+        <AuthContext.Provider value={{
+            user,
+            loading,
+            login,
+            register,
+            registerByAdmin,
+            logout,
+            updateUser
+        }}>
             {children}
         </AuthContext.Provider>
     );
