@@ -11,7 +11,7 @@ import {
 import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
 
-// Interface User disesuaikan dengan kebutuhan data Puskesmas
+// Interface User disesuaikan dengan kebutuhan data Puskesmas & Role Bidan
 interface User {
     uid: string;
     email: string | null;
@@ -26,14 +26,14 @@ interface User {
     age?: number;
     lila?: number;
     isPregnant?: boolean;
-    wilayah?: string; // Untuk klasifikasi wilayah kerja
+    wilayah?: string; // Kunci utama untuk klasifikasi kerja Bidan & Parent
 }
 
 interface AuthContextType {
     user: User | null;
     loading: boolean;
     login: (phone: string, password: string) => Promise<void>;
-    register: (phone: string, password: string, name: string, role: string) => Promise<void>;
+    register: (phone: string, password: string, name: string, role: string, wilayah?: string) => Promise<void>;
     registerByAdmin: (phone: string, password: string, name: string, role: string, wilayah?: string) => Promise<string>;
     logout: () => Promise<void>;
     updateUser: (data: Partial<User>) => Promise<void>;
@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // Helper untuk mengubah nomor telepon menjadi format email Firebase
+    // Helper untuk mengubah nomor telepon menjadi format email virtual Firebase
     const formatEmail = (phone: string) => `${phone.trim()}@gizianak.local`;
 
     useEffect(() => {
@@ -85,15 +85,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await signInWithEmailAndPassword(auth, email, password);
     };
 
-    const register = async (phone: string, password: string, name: string, role: string) => {
+    // REVISI: Menambahkan parameter wilayah pada register standar
+    const register = async (phone: string, password: string, name: string, role: string, wilayah?: string) => {
         const email = formatEmail(phone);
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
         await setDoc(doc(db, 'users', userCredential.user.uid), {
             name,
             phone,
-            email, // Email virtual untuk sistem
+            email,
             role,
+            wilayah: wilayah || '', // Simpan wilayah jika diinput saat register
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         });
@@ -101,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     /**
      * Mendaftarkan user melalui API (Firebase Admin SDK) 
-     * agar Admin tidak otomatis logout/ter-switch akunnya.
+     * REVISI: Memastikan wilayah diteruskan ke body request API
      */
     const registerByAdmin = async (phone: string, password: string, name: string, role: string, wilayah?: string) => {
         const email = formatEmail(phone);
@@ -115,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 name,
                 role,
                 phone,
-                wilayah
+                wilayah: wilayah || '' // Pastikan string kosong jika tidak ada wilayah
             }),
         });
 

@@ -14,10 +14,11 @@ export default function LoginPage() {
 
     useEffect(() => {
         if (user) {
-            if (user.role === 'parent') {
-                router.push('/parent/dashboard')
-            } else if (user.role === 'admin') {
+            // Izinkan admin DAN bidan masuk ke area /admin/dashboard
+            if (user.role === 'admin' || user.role === 'bidan') {
                 router.push('/admin/dashboard')
+            } else if (user.role === 'parent') {
+                router.push('/parent/dashboard')
             }
         }
     }, [user, router])
