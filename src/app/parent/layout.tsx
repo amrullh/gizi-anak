@@ -3,15 +3,16 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { FaBook, FaChartBar, FaPlusCircle, FaBell, FaExclamationTriangle, FaPhoneAlt, FaBaby } from 'react-icons/fa'
+import { FaBook, FaChartBar, FaPlusCircle, FaBell, FaExclamationTriangle, FaPhoneAlt, FaBaby, FaSpinner } from 'react-icons/fa'
 import { useAuth } from '@/context/AuthContext'
 import { useChildren } from '@/hooks/useChildren'
 import { useAllGrowthRecords } from '@/hooks/useAllGrowthRecords'
 import { calculateNutritionalStatus, calculateDetailedAge } from '@/utils/nutrition'
+import { db } from '@/lib/firebase/client'
+import { collection, query, where, getDocs, limit } from 'firebase/firestore'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 
-// Definisikan Interface untuk Child yang bermasalah agar Type-Safe
 interface ProblematicChild {
     name: string;
     statusGizi: string;
@@ -22,36 +23,30 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
     const pathname = usePathname()
     const router = useRouter()
     const { user, loading: authLoading } = useAuth()
-
     const { children: myChildren, loading: childrenLoading } = useChildren()
     const { records, loading: recordsLoading } = useAllGrowthRecords()
 
     const [showWarning, setShowWarning] = useState(false)
     const [agreedSteps, setAgreedSteps] = useState<string[]>([])
     const [stuntedChildren, setStuntedChildren] = useState<ProblematicChild[]>([])
+    const [bidanPhone, setBidanPhone] = useState<string | null>(null)
 
+    // 1. Logika Deteksi Masalah Anak & Cek LocalStorage
     useEffect(() => {
-        if (!childrenLoading && !recordsLoading && myChildren.length > 0) {
-            const problematic: ProblematicChild[] = []
+        if (!childrenLoading && !recordsLoading && myChildren.length > 0 && user) {
+            // Cek apakah user ini sudah pernah menyetujui peringatan sebelumnya
+            const hasAgreed = localStorage.getItem(`agreed_warning_${user.uid}`)
+            if (hasAgreed === 'true') return;
 
+            const problematic: ProblematicChild[] = []
             myChildren.forEach(child => {
                 const childRecords = records.filter(r => r.childId === child.id)
                 if (childRecords.length > 0) {
                     const latest = [...childRecords].sort((a, b) => b.date.getTime() - a.date.getTime())[0]
-
                     const birthDateRaw = child.birthDate as any;
-                    const birthDate = birthDateRaw?.seconds
-                        ? new Date(birthDateRaw.seconds * 1000)
-                        : new Date(birthDateRaw);
-
+                    const birthDate = birthDateRaw?.seconds ? new Date(birthDateRaw.seconds * 1000) : new Date(birthDateRaw);
                     const ageData = calculateDetailedAge(birthDate, latest.date);
-
-                    const result = calculateNutritionalStatus(
-                        ageData.totalMonths,
-                        child.gender as 'male' | 'female',
-                        latest.weight,
-                        latest.height
-                    )
+                    const result = calculateNutritionalStatus(ageData.totalMonths, child.gender as 'male' | 'female', latest.weight, latest.height)
 
                     if (result.nutrition.color === 'red' || result.stunting.isStunted) {
                         problematic.push({
@@ -66,15 +61,35 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
             if (problematic.length > 0) {
                 setStuntedChildren(problematic)
                 setShowWarning(true)
+                fetchBidanContact(user.wilayah)
             }
         }
-    }, [myChildren, records, childrenLoading, recordsLoading])
+    }, [myChildren, records, childrenLoading, recordsLoading, user])
+
+    // 2. Ambil nomor telepon bidan sesuai wilayah
+    const fetchBidanContact = async (wilayah?: string) => {
+        if (!wilayah) return;
+        try {
+            const q = query(
+                collection(db, 'users'),
+                where('role', '==', 'bidan'),
+                where('wilayah', '==', wilayah),
+                limit(1)
+            );
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                setBidanPhone(snap.docs[0].data().phone);
+            }
+        } catch (err) {
+            console.error("Gagal mengambil kontak bidan", err);
+        }
+    }
 
     useEffect(() => {
         if (!authLoading && user) {
             if (user.role !== 'parent') {
                 router.push('/login')
-            } else if (!user.phone || !user.address) {
+            } else if (!user.name || !user.phone || !user.wilayah) {
                 router.push('/parent/complete-profile')
             }
         } else if (!authLoading && !user) {
@@ -90,21 +105,23 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
     ]
 
     const handleCheckStep = (step: string) => {
-        setAgreedSteps(prev =>
-            prev.includes(step) ? prev.filter(s => s !== step) : [...prev, step]
-        )
+        setAgreedSteps(prev => prev.includes(step) ? prev.filter(s => s !== step) : [...prev, step])
     }
 
-    if (authLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
-            </div>
-        )
+    const handleConfirmWarning = () => {
+        if (user) {
+            localStorage.setItem(`agreed_warning_${user.uid}`, 'true');
+            setShowWarning(false);
+        }
     }
+
+    if (authLoading) return (
+        <div className="min-h-screen flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
+        </div>
+    )
 
     if (!user || user.role !== 'parent') return null;
-
     const initial = user.name ? user.name.charAt(0).toUpperCase() : 'U'
 
     return (
@@ -136,12 +153,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
                         <div className="space-y-3 mb-8">
                             {steps.map((step, idx) => (
                                 <label key={idx} className={`flex items-start gap-3 p-4 border-2 rounded-2xl transition-all cursor-pointer ${agreedSteps.includes(step) ? 'border-pink-500 bg-pink-50' : 'border-gray-100 bg-gray-50/50'}`}>
-                                    <input
-                                        type="checkbox"
-                                        className="w-5 h-5 mt-0.5 accent-pink-500"
-                                        onChange={() => handleCheckStep(step)}
-                                        checked={agreedSteps.includes(step)}
-                                    />
+                                    <input type="checkbox" className="w-5 h-5 mt-0.5 accent-pink-500" onChange={() => handleCheckStep(step)} checked={agreedSteps.includes(step)} />
                                     <span className={`text-xs font-bold leading-relaxed ${agreedSteps.includes(step) ? 'text-pink-700' : 'text-gray-500'}`}>{step}</span>
                                 </label>
                             ))}
@@ -153,24 +165,22 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
                                     <div className="flex items-center gap-3">
                                         <FaPhoneAlt />
                                         <div>
-                                            <p className="text-[10px] font-black uppercase opacity-80">Hubungi Puskesmas</p>
-                                            <p className="text-lg font-black">0812-4455-6677</p>
+                                            <p className="text-[10px] font-black uppercase opacity-80">Hubungi Bidan Wilayah ({user.wilayah})</p>
+                                            <p className="text-lg font-black">{bidanPhone || 'Memuat kontak...'}</p>
                                         </div>
                                     </div>
                                 </div>
                                 <Button
                                     fullWidth
                                     className="h-14 bg-gray-900 text-white font-black rounded-2xl shadow-xl"
-                                    onClick={() => setShowWarning(false)}
+                                    onClick={handleConfirmWarning}
                                 >
                                     SAYA MENGERTI & LANJUT
                                 </Button>
                             </div>
                         ) : (
                             <div className="text-center">
-                                <div className="inline-block px-4 py-2 bg-gray-100 rounded-full text-[10px] text-gray-400 font-black uppercase">
-                                    Selesaikan {steps.length - agreedSteps.length} Poin Lagi
-                                </div>
+                                <div className="inline-block px-4 py-2 bg-gray-100 rounded-full text-[10px] text-gray-400 font-black uppercase">Selesaikan {steps.length - agreedSteps.length} Poin Lagi</div>
                             </div>
                         )}
                     </Card>
