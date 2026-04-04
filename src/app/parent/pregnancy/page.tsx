@@ -96,7 +96,7 @@ export default function ParentPregnancyPage() {
                         <FaCalendarAlt size={22} />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Prediksi Persalinan (HPL)</p>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Taksiran Persalinan (HPL)</p>
                         <p className="font-bold text-gray-800">{formatDate(pregnancy.taksiranPersalinan)}</p>
                     </div>
                 </Card>
