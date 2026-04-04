@@ -99,24 +99,6 @@ export default function LoginPage() {
                             </Link>
                         </p>
                     </div>
-
-                    <div className="mt-8 pt-6 border-t">
-                        <p className="text-sm text-gray-600 mb-3 text-center">Login Cepat (Testing):</p>
-                        <div className="grid grid-cols-2 gap-3">
-                            <Link
-                                href="/parent/dashboard"
-                                className="bg-pink-50 text-pink-700 p-2 rounded-lg text-center hover:bg-pink-100 text-xs font-bold"
-                            >
-                                👨‍👩‍👧 Orang Tua
-                            </Link>
-                            <Link
-                                href="/admin/dashboard"
-                                className="bg-purple-50 text-purple-700 p-2 rounded-lg text-center hover:bg-purple-100 text-xs font-bold"
-                            >
-                                🏥 Admin
-                            </Link>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
