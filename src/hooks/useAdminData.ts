@@ -3,14 +3,15 @@
 
 import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/client'; // Pastikan import db dari client
+import { useAuth } from '@/context/AuthContext'; // Tambahkan ini untuk cek role & wilayah
 import { Child } from '@/types/child';
 import { GrowthRecord } from '@/types/growth';
 import { calculateNutritionalStatus, calculateDetailedAge } from '@/utils/nutrition';
 
 export function useAdminData() {
+    const { user } = useAuth(); // Ambil context user
     const [loading, setLoading] = useState(true);
-    // State ini berisi data anak yang sudah digabung dengan BB/TB terbaru untuk Reports & Monitoring
     const [childrenData, setChildrenData] = useState<any[]>([]);
     const [stats, setStats] = useState({
         totalChildren: 0,
@@ -22,17 +23,23 @@ export function useAdminData() {
 
     useEffect(() => {
         const fetchData = async () => {
+            // Pastikan data user sudah tersedia sebelum melakukan query
+            if (!user) return;
+
             setLoading(true);
             try {
-                // 1. Fetch semua data yang dibutuhkan secara paralel
-                const [childrenSnap, parentsSnap, articlesSnap, recordsSnap] = await Promise.all([
-                    getDocs(collection(db, 'children')),
-                    getDocs(query(collection(db, 'users'), where('role', '==', 'parent'))),
-                    getDocs(collection(db, 'articles')),
-                    getDocs(collection(db, 'growthRecords'))
-                ]);
+                const isBidan = user.role === 'bidan';
+                const wilayahUser = user.wilayah;
 
-                // Map data orang tua untuk mempermudah pencarian nama & telepon
+                // 1. Filter Orang Tua berdasarkan Wilayah (Jika Bidan)
+                let parentsBaseQuery = query(collection(db, 'users'), where('role', '==', 'parent'));
+                if (isBidan && wilayahUser) {
+                    parentsBaseQuery = query(parentsBaseQuery, where('wilayah', '==', wilayahUser));
+                }
+
+                const parentsSnap = await getDocs(parentsBaseQuery);
+                const validParentIds = parentsSnap.docs.map(doc => doc.id);
+
                 const parentsMap = new Map();
                 parentsSnap.forEach(doc => {
                     const data = doc.data();
@@ -42,7 +49,30 @@ export function useAdminData() {
                     });
                 });
 
-                // 2. Olah Growth Records: Handle format tanggal (Timestamp vs String) dan cari yang TERBARU
+                // 2. Filter Anak berdasarkan ID Orang Tua yang sudah terfilter (Jika Bidan)
+                let childrenSnapDocs: any[] = [];
+                if (isBidan) {
+                    if (validParentIds.length > 0) {
+                        // Ambil hanya anak yang orang tuanya ada di wilayah tersebut
+                        const qChild = query(collection(db, 'children'), where('userId', 'in', validParentIds));
+                        const snap = await getDocs(qChild);
+                        childrenSnapDocs = snap.docs;
+                    } else {
+                        childrenSnapDocs = [];
+                    }
+                } else {
+                    // Admin Pusat: Ambil semua anak
+                    const snap = await getDocs(collection(db, 'children'));
+                    childrenSnapDocs = snap.docs;
+                }
+
+                // 3. Fetch data lainnya (Artikel & Records tetap diambil semua untuk referensi)
+                const [articlesSnap, recordsSnap] = await Promise.all([
+                    getDocs(collection(db, 'articles')),
+                    getDocs(collection(db, 'growthRecords'))
+                ]);
+
+                // Mapping Records
                 const records = recordsSnap.docs.map(doc => {
                     const d = doc.data();
                     let dateObj = new Date();
@@ -62,16 +92,15 @@ export function useAdminData() {
                     }
                 });
 
-                // 3. Gabungkan Data Anak dengan Hasil Pengukuran & Kalkulasi Z-Score WHO
+                // 4. Gabungkan Data Anak yang sudah terfilter
                 let goodCount = 0;
                 const alertList: any[] = [];
 
-                const enhancedChildren = childrenSnap.docs.map(doc => {
+                const enhancedChildren = childrenSnapDocs.map(doc => {
                     const child = { id: doc.id, ...doc.data() } as any;
                     const latest = latestRecordsMap.get(child.id);
                     const parentInfo = parentsMap.get(child.userId);
 
-                    // Penyelamat Tanggal Lahir (Handle Firestore Timestamp atau String)
                     let birthDate = new Date();
                     if (child.birthDate?.seconds) {
                         birthDate = new Date(child.birthDate.seconds * 1000);
@@ -79,14 +108,11 @@ export function useAdminData() {
                         birthDate = new Date(child.birthDate);
                     }
 
-                    // Hitung umur detail menggunakan referensi record terbaru
                     const referenceDate = latest?.date || new Date();
                     const ageData = calculateDetailedAge(birthDate, referenceDate);
-
                     const weightVal = latest?.weight || 0;
                     const heightVal = latest?.height || 0;
 
-                    // Kalkulasi Status Gizi (IMT/U) & Stunting (TB/U)
                     const result = calculateNutritionalStatus(
                         ageData.totalMonths,
                         child.gender,
@@ -94,12 +120,10 @@ export function useAdminData() {
                         heightVal
                     );
 
-                    // Hitung Statistik Gizi Baik (Hanya jika data ada & status 'green')
                     if (weightVal > 0 && result.nutrition.color === 'green') {
                         goodCount++;
                     }
 
-                    // Susun Data untuk Alert Dashboard (Jika Gizi Kurang/Lebih ATAU Stunting)
                     if (weightVal > 0 && (result.nutrition.color !== 'green' || result.stunting.isStunted)) {
                         alertList.push({
                             id: child.id,
@@ -113,7 +137,6 @@ export function useAdminData() {
                         });
                     }
 
-                    // Return objek lengkap untuk dikirim ke Reports & Monitoring
                     return {
                         ...child,
                         parentName: parentInfo?.name || '-',
@@ -127,7 +150,7 @@ export function useAdminData() {
                     };
                 });
 
-                // 4. Update States Utama
+                // 5. Update States Utama
                 setChildrenData(enhancedChildren);
                 setStats({
                     totalChildren: enhancedChildren.length,
@@ -136,7 +159,6 @@ export function useAdminData() {
                     goodNutritionPercentage: enhancedChildren.length > 0 ? Math.round((goodCount / enhancedChildren.length) * 100) : 0,
                 });
 
-                // Sort alert: Prioritas warna Merah (Bahaya) di atas
                 setAlerts(alertList.sort((a, b) => (a.color === 'red' ? -1 : 1)));
 
             } catch (error) {
@@ -147,7 +169,7 @@ export function useAdminData() {
         };
 
         fetchData();
-    }, []);
+    }, [user]); // Re-fetch jika data user berubah
 
     return { loading, stats, alerts, childrenData };
 }
