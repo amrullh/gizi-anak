@@ -16,7 +16,8 @@ import {
     FaVenusMars,
     FaUsers,
     FaSeedling,
-    FaHeartbeat
+    FaHeartbeat,
+    FaMapMarkerAlt // Icon untuk Kelola Wilayah
 } from 'react-icons/fa'
 import { useAuth } from '@/context/AuthContext'
 import { motion } from 'framer-motion'
@@ -28,7 +29,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const { user, loading } = useAuth()
 
     useEffect(() => {
-        if (!loading && (!user || user.role !== 'admin')) {
+        // REVISI: Izinkan role 'admin' DAN 'bidan' untuk mengakses layout ini
+        if (!loading && (!user || (user.role !== 'admin' && user.role !== 'bidan'))) {
             router.push('/login')
         }
     }, [user, loading, router])
@@ -56,18 +58,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         )
     }
 
-    if (!user || user.role !== 'admin') {
+    // REVISI: Pastikan pengecekan role sinkron dengan useEffect
+    if (!user || (user.role !== 'admin' && user.role !== 'bidan')) {
         return null
     }
 
+    // REVISI: Navigasi Dinamis berdasarkan Role
     const navItems = [
         { href: '/admin/dashboard', icon: FaHome, label: 'Dashboard' },
-        { href: '/admin/users', icon: FaUsers, label: 'Manajemen User' },
+
+        // Fitur khusus Admin (Puskesmas Pusat)
+        ...(user.role === 'admin' ? [
+            { href: '/admin/regions', icon: FaMapMarkerAlt, label: 'Kelola Wilayah' },
+            { href: '/admin/users', icon: FaUsers, label: 'Manajemen User' },
+            { href: '/admin/reports', icon: FaChartBar, label: 'Laporan' },
+        ] : []),
+
+        // Fitur yang bisa diakses Admin & Bidan
         { href: '/admin/articles', icon: FaNewspaper, label: 'Kelola Artikel' },
         { href: '/admin/monitoring', icon: FaEye, label: 'Monitoring' },
         { href: '/admin/input', icon: FaPlus, label: 'Input Data' },
         { href: '/admin/pregnancy', icon: FaVenusMars, label: 'Data Ibu Hamil' },
-        { href: '/admin/reports', icon: FaChartBar, label: 'Laporan' },
     ]
 
     const initial = user.name ? user.name.charAt(0).toUpperCase() : 'A'
@@ -126,7 +137,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <div className="fixed inset-0 bg-pink-900/20 backdrop-blur-sm lg:hidden z-50" onClick={() => setSidebarOpen(false)} />
                 )}
 
-                {/* SIDEBAR - versi cerah & pink */}
+                {/* SIDEBAR */}
                 <aside className={`
                     fixed lg:sticky top-0 left-0 z-50 w-72 h-screen bg-white/90 backdrop-blur-md border-r border-pink-100
                     transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
@@ -139,7 +150,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             </div>
                             <h2 className="text-2xl font-serif italic font-black text-gray-800 tracking-tight">Puskesmas</h2>
                         </div>
-                        <p className="text-[10px] uppercase tracking-[0.3em] text-pink-500 font-bold ml-1">Admin Portal</p>
+                        <p className="text-[10px] uppercase tracking-[0.3em] text-pink-500 font-bold ml-1">
+                            {user.role === 'admin' ? 'Admin Portal' : `Bidan ${user.wilayah || ''}`}
+                        </p>
                     </div>
 
                     <nav className="p-5 flex-1 overflow-y-auto space-y-2">
@@ -181,7 +194,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 <div className="h-10 w-1 bg-pink-400 rounded-full"></div>
                                 <div>
                                     <h1 className="font-serif italic font-black text-gray-800 text-xl">GiziAnak</h1>
-                                    <p className="text-[10px] text-pink-500 font-black uppercase tracking-[0.2em]">Dashboard Utama</p>
+                                    <p className="text-[10px] text-pink-500 font-black uppercase tracking-[0.2em]">
+                                        {user.role === 'admin' ? 'Dashboard Utama' : `Wilayah: ${user.wilayah || '-'}`}
+                                    </p>
                                 </div>
                             </div>
 
@@ -193,8 +208,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                                 <div className="flex items-center gap-5 pl-8 border-l border-pink-100">
                                     <div className="text-right">
-                                        <div className="font-black text-gray-800 text-sm leading-none mb-1">{user.name || 'Admin'}</div>
-                                        <div className="text-[11px] text-pink-500 font-bold">{user.email}</div>
+                                        <div className="font-black text-gray-800 text-sm leading-none mb-1">{user.name || 'User'}</div>
+                                        <div className="text-[11px] text-pink-500 font-bold capitalize">{user.role}</div>
                                     </div>
                                     <div className="w-12 h-12 bg-pink-500 text-white rounded-2xl flex items-center justify-center text-sm font-black shadow-md shadow-pink-200 border-2 border-white hover:scale-105 transition-transform cursor-pointer">
                                         {initial}

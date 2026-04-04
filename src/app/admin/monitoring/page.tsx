@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import { useState, useMemo } from 'react'
 import {
@@ -19,23 +19,29 @@ import { useMonitoringData, MonitoringChild } from '@/hooks/useMonitoringData';
 import { calculateNutritionalStatus, calculateDetailedAge } from '@/utils/nutrition';
 import GrowthChart from '@/components/features/GrowthChart'
 import { useGrowthRecords } from '@/hooks/useGrowthRecords'
+import { useAuth } from '@/context/AuthContext'; // IMPORT: useAuth untuk filter wilayah
 
 export default function MonitoringPage() {
+    const { user } = useAuth(); // AMBIL: Data user/bidan yang login
     const { loading, children } = useMonitoringData();
     const [selectedStatus, setSelectedStatus] = useState('all')
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedChild, setSelectedChild] = useState<MonitoringChild | null>(null);
 
-    // FIX: Pastikan konversi tanggal aman sebelum dikirim ke pembantu umur
     const safeCalculateAge = (birthDate: any) => {
         if (!birthDate) return { totalMonths: 0, label: '-' };
-        // Jika birthDate adalah Firebase Timestamp (punya detik), ubah ke Date
         const dateObj = birthDate.seconds ? new Date(birthDate.seconds * 1000) : new Date(birthDate);
         return calculateDetailedAge(dateObj);
     };
 
     const filteredData = useMemo(() => {
         return children.filter(child => {
+            // REVISI LOGIC: Filter berdasarkan wilayah jika user adalah bidan
+            const isBidan = user?.role === 'bidan';
+            const matchesWilayah = !isBidan || child.wilayah === user?.wilayah;
+
+            if (!matchesWilayah) return false;
+
             const ageData = safeCalculateAge(child.birthDate);
             const result = calculateNutritionalStatus(
                 ageData.totalMonths,
@@ -54,7 +60,7 @@ export default function MonitoringPage() {
 
             return matchesStatus && matchesSearch;
         });
-    }, [children, selectedStatus, searchQuery]);
+    }, [children, selectedStatus, searchQuery, user]); // TAMBAHKAN: user ke dependency array
 
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center bg-white">
@@ -74,7 +80,9 @@ export default function MonitoringPage() {
                         <span className="text-xs font-medium uppercase tracking-[0.2em] text-pink-400">Data Anak</span>
                     </div>
                     <h1 className="text-2xl font-serif italic font-semibold text-gray-800">Monitoring Data Anak</h1>
-                    <p className="text-gray-400 text-sm">Status gizi & stunting real-time (Standar WHO/Kemenkes 2020).</p>
+                    <p className="text-gray-400 text-sm">
+                        {user?.role === 'bidan' ? `Wilayah: ${user?.wilayah}` : 'Status gizi & stunting real-time (Standar WHO/Kemenkes 2020)'}
+                    </p>
                 </div>
                 <Button className="rounded-full shadow-sm bg-pink-500 hover:bg-pink-600 text-white border-none transition-all">
                     <FaDownload className="mr-2" size={14} /> Export Data
@@ -120,7 +128,6 @@ export default function MonitoringPage() {
                                 const ageData = safeCalculateAge(child.birthDate);
                                 const result = calculateNutritionalStatus(ageData.totalMonths, child.gender as any, child.weightVal, child.heightVal);
 
-                                // Warna status berdasarkan medis (tetap hijau, orange, merah)
                                 const colorMap: any = {
                                     green: 'bg-green-50 text-green-700 border-green-200',
                                     orange: 'bg-orange-50 text-orange-700 border-orange-200',

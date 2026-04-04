@@ -8,8 +8,10 @@ import { db } from '@/lib/firebase/client';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { useChildren } from '@/hooks/useChildren';
 import { useGrowthRecords } from '@/hooks/useGrowthRecords';
+import { useAuth } from '@/context/AuthContext'; // Import useAuth untuk akses data bidan
 
 export default function AdminInputPage() {
+    const { user: currentUser } = useAuth(); // Ambil data user yang sedang login
     const [search, setSearch] = useState('');
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -36,23 +38,49 @@ export default function AdminInputPage() {
     });
 
     const fetchParents = async (searchQuery: string = '') => {
+        if (!currentUser) return; // Pastikan user sudah terload
         setLoading(true);
         try {
             const usersRef = collection(db, 'users');
-            let q = query(
-                usersRef,
-                where('role', '==', 'parent'),
-                where('name', '>=', searchQuery),
-                where('name', '<=', searchQuery + '\uf8ff'),
-                orderBy('name'),
-                limit(20)
-            );
+
+            // LOGIKA REVISI: Filter berdasarkan role dan wilayah
+            let q;
+            if (currentUser.role === 'bidan' && currentUser.wilayah) {
+                // Jika Bidan: Filter berdasarkan role 'parent' DAN wilayah yang sama
+                q = query(
+                    usersRef,
+                    where('role', '==', 'parent'),
+                    where('wilayah', '==', currentUser.wilayah),
+                    where('name', '>=', searchQuery),
+                    where('name', '<=', searchQuery + '\uf8ff'),
+                    orderBy('name'),
+                    limit(20)
+                );
+            } else {
+                // Jika Admin: Filter semua parent tanpa batasan wilayah
+                q = query(
+                    usersRef,
+                    where('role', '==', 'parent'),
+                    where('name', '>=', searchQuery),
+                    where('name', '<=', searchQuery + '\uf8ff'),
+                    orderBy('name'),
+                    limit(20)
+                );
+            }
+
             const snap = await getDocs(q);
             setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        } catch (err) { console.error(err); } finally { setLoading(false); }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    useEffect(() => { fetchParents(); }, []);
+    // Re-fetch data saat komponen dimuat atau user login berubah
+    useEffect(() => {
+        if (currentUser) fetchParents();
+    }, [currentUser]);
 
     // HANDLE: Save Profil Anak (Tambah/Update)
     const handleSaveChildProfile = async (e: React.FormEvent) => {
@@ -210,7 +238,7 @@ export default function AdminInputPage() {
                     <Card key={u.id} className="flex justify-between items-center hover:border-purple-300 transition-colors">
                         <div>
                             <div className="font-bold">{u.name}</div>
-                            <div className="text-xs text-gray-500">{u.phone}</div>
+                            <div className="text-xs text-gray-500">{u.phone} {u.wilayah ? `• Wilayah: ${u.wilayah}` : ''}</div>
                         </div>
                         <Button onClick={() => { setSelectedUser(u); setView('input-anak'); }} variant="outline">Kelola Anak</Button>
                     </Card>
