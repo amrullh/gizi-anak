@@ -63,23 +63,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         return null
     }
 
-    // REVISI: Navigasi Dinamis berdasarkan Role
     const navItems = [
         { href: '/admin/dashboard', icon: FaHome, label: 'Dashboard' },
 
-        // Fitur khusus Admin (Puskesmas Pusat)
-        ...(user.role === 'admin' ? [
-            { href: '/admin/regions', icon: FaMapMarkerAlt, label: 'Kelola Wilayah' },
-            { href: '/admin/users', icon: FaUsers, label: 'Manajemen User' },
-            { href: '/admin/reports', icon: FaChartBar, label: 'Laporan' },
-        ] : []),
-
-        // Fitur yang bisa diakses Admin & Bidan
+        // Fitur yang bisa diakses Admin & Bidan (Urutan: Artikel - Monitoring - Input - Ibu Hamil)
         { href: '/admin/articles', icon: FaNewspaper, label: 'Kelola Artikel' },
         { href: '/admin/monitoring', icon: FaEye, label: 'Monitoring' },
-        { href: '/admin/input', icon: FaPlus, label: 'Input Data' },
+        { href: '/admin/input', icon: FaPlus, label: 'Data Anak' },
         { href: '/admin/pregnancy', icon: FaVenusMars, label: 'Data Ibu Hamil' },
-    ]
+
+        // Fitur khusus Admin (Puskesmas Pusat) (Urutan: Kelola Wilayah - Manajemen User - Laporan)
+        ...(user.role === 'admin' ? [
+            { href: '/admin/users', icon: FaUsers, label: 'Manajemen User' },
+            { href: '/admin/regions', icon: FaMapMarkerAlt, label: 'Kelola Wilayah' },
+
+            { href: '/admin/reports', icon: FaChartBar, label: 'Laporan' },
+        ] : []),
+    ];
 
     const initial = user.name ? user.name.charAt(0).toUpperCase() : 'A'
 

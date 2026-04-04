@@ -84,9 +84,6 @@ export default function MonitoringPage() {
                         {user?.role === 'bidan' ? `Wilayah: ${user?.wilayah}` : 'Status gizi & stunting real-time (Standar WHO/Kemenkes 2020)'}
                     </p>
                 </div>
-                <Button className="rounded-full shadow-sm bg-pink-500 hover:bg-pink-600 text-white border-none transition-all">
-                    <FaDownload className="mr-2" size={14} /> Export Data
-                </Button>
             </div>
 
             <div className="flex flex-col md:flex-row gap-3">
