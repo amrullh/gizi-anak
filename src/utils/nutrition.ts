@@ -56,17 +56,26 @@ export function calculateDetailedAge(birthDate: Date, referenceDate: Date = new 
     let months = referenceDate.getMonth() - birthDate.getMonth();
     let days = referenceDate.getDate() - birthDate.getDate();
 
+    // 1. Logika Pinjam Hari (sesuai poin 2 di gambar)
     if (days < 0) {
+        days += 30; // Pinjam 30 hari
         months--;
-        const lastMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 0);
-        days += lastMonth.getDate();
-    }
-    if (months < 0) {
-        years--;
-        months += 12;
     }
 
-    const totalMonths = (years * 12) + months;
+    // 2. Logika Pinjam Bulan (sesuai poin 3 di gambar)
+    if (months < 0) {
+        months += 12; // Pinjam 12 bulan
+        years--;
+    }
+
+    // 3. HITUNG TOTAL BULAN DENGAN PEMBULATAN (sesuai instruksi kuning di gambar)
+    let totalMonths = (years * 12) + months;
+
+    // "Jika jumlah hari >= 15 hari hitungan usia bertambah 1 bln"
+    if (days >= 15) {
+        totalMonths += 1;
+    }
+    // Jika < 15 hari, dibiarkan saja (diabaikan)
 
     return {
         totalMonths,
