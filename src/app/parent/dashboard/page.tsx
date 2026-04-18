@@ -1,13 +1,23 @@
 'use client'
 
-import { FaChild, FaHeartbeat, FaArrowRight, FaExclamationTriangle } from 'react-icons/fa'
+import { useState, useEffect, useMemo } from 'react'
+import {
+    FaChild,
+    FaHeartbeat,
+    FaArrowRight,
+    FaExclamationTriangle,
+    FaChartBar,
+    FaWeight,
+    FaArrowsAltV,
+    FaChartLine // TAMBAHKAN INI BGST
+} from 'react-icons/fa'
 import Link from 'next/link'
 import Card from '@/components/ui/Card'
 import GrowthChart from '@/components/features/GrowthChart'
+import ZScoreChart from '@/components/features/ZScoreChart'
 import { useChildren } from '@/hooks/useChildren'
 import { useAllGrowthRecords } from '@/hooks/useAllGrowthRecords'
 import { useAuth } from '@/context/AuthContext'
-import { useState, useEffect } from 'react'
 import { calculateNutritionalStatus, calculateDetailedAge } from '@/utils/nutrition'
 
 export default function ParentDashboard() {
@@ -24,42 +34,41 @@ export default function ParentDashboard() {
 
     const selectedChild = children.find(c => c.id === selectedChildId)
 
-    // Mapping Warna Tailwind berdasarkan hasil logic Z-Score
-    const colorClassMap: Record<string, string> = {
-        'green': 'bg-emerald-100 text-emerald-800 border-emerald-200',
-        'orange': 'bg-amber-100 text-amber-800 border-amber-200',
-        'red': 'bg-red-100 text-red-800 border-red-200',
-    }
+    // Helper warna badge status gizi (Identik dengan Admin)
+    const getBadgeColor = (status: string): string => {
+        if (status.includes('Sangat Kurang') || status.includes('Buruk') || status.includes('Sangat Pendek') || status.includes('Obesitas'))
+            return 'bg-red-100 text-red-700 border-red-200';
+        if (status.includes('Kurang') || status.includes('Pendek') || status.includes('Risiko') || status.includes('Lebih'))
+            return 'bg-orange-100 text-orange-700 border-orange-200';
+        return 'bg-green-100 text-green-700 border-green-200';
+    };
 
-    const getChildNutritionalStatus = (childId: string) => {
+    const getFullNutritionalAnalysis = (childId: string) => {
         const childRecords = allRecords.filter(r => r.childId === childId)
-        if (childRecords.length === 0) return { status: 'Belum Ada Data', color: 'bg-gray-100 text-gray-800', isStunted: false }
+        if (childRecords.length === 0) return null
 
         const latest = [...childRecords].sort((a, b) => b.date.getTime() - a.date.getTime())[0]
         const child = children.find(c => c.id === childId)
-        if (!child) return { status: 'Tidak Diketahui', color: 'bg-gray-100 text-gray-800', isStunted: false }
+        if (!child) return null
 
         const birthDate = child.birthDate instanceof Date ? child.birthDate : (child.birthDate as any).toDate()
         const ageData = calculateDetailedAge(birthDate, latest.date)
 
-        // PANGGIL UTILS BARU (Output: nutrition, stunting, zBmi, zHeight)
-        const result = calculateNutritionalStatus(
+        // PANGGIL LOGIKA PERMENKES 2020 (Identik dengan Admin Monitoring)
+        return calculateNutritionalStatus(
             ageData.totalMonths,
             child.gender as 'male' | 'female',
             latest.weight,
-            latest.height
+            latest.height,
+            ageData.totalMonths < 24 ? 'baring' : 'berdiri'
         )
-
-        return {
-            status: result.nutrition.status,
-            color: colorClassMap[result.nutrition.color] || 'bg-gray-100 text-gray-800',
-            stunting: result.stunting
-        }
     }
 
-    const currentStatus = selectedChild ? getChildNutritionalStatus(selectedChild.id) : null
+    const currentAnalysis = useMemo(() =>
+        selectedChild ? getFullNutritionalAnalysis(selectedChild.id) : null
+        , [selectedChild, allRecords])
 
-    const getLastUpdate = (childId: string) => {
+    const getLastUpdateLabel = (childId: string) => {
         const childRecords = allRecords.filter(r => r.childId === childId)
         if (childRecords.length === 0) return '-'
         const latest = childRecords.sort((a, b) => b.date.getTime() - a.date.getTime())[0]
@@ -78,158 +87,161 @@ export default function ParentDashboard() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-10">
             {/* GREETING */}
             <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Halo, {user?.name || 'Ayah/Bunda'}! 👋</h1>
-                <p className="text-base md:text-lg text-gray-600">Pantau pertumbuhan si kecil sesuai standar WHO</p>
+                <h1 className="text-2xl font-bold text-gray-800 italic font-serif">Halo, {user?.name || 'Ayah/Bunda'}! 👋</h1>
+                <p className="text-sm text-gray-500">Pantau tumbuh kembang si kecil berdasarkan standar Permenkes 2020.</p>
             </div>
 
-            {/* STATS CARDS */}
-            <div className="grid grid-cols-2 gap-4">
-                <Card className="bg-gradient-to-br from-pink-50 to-pink-100 border-pink-200 p-4 md:p-5">
+            {/* RINGKASAN STATUS UTAMA */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="bg-gradient-to-br from-pink-500 to-rose-400 text-white border-none p-5 rounded-3xl shadow-lg shadow-pink-100">
                     <div className="flex justify-between items-center">
                         <div>
-                            <p className="text-xs md:text-sm text-pink-600 font-medium">Total Anak</p>
-                            <p className="text-2xl md:text-3xl font-bold text-gray-800">{children.length}</p>
+                            <p className="text-pink-100 text-[10px] font-black uppercase tracking-widest">Berat Badan (BB/U)</p>
+                            <h3 className="text-xl font-black mt-1 uppercase">
+                                {currentAnalysis?.weightStatus.status || 'No Data'}
+                            </h3>
                         </div>
-                        <FaChild className="text-pink-500 text-2xl md:text-3xl" />
+                        <FaWeight size={32} className="opacity-30" />
                     </div>
                 </Card>
 
-                <Card className={`bg-gradient-to-br border-2 p-4 md:p-5 transition-all ${currentStatus ? currentStatus.color : 'bg-gray-50 border-gray-200'}`}>
+                <Card className="bg-gradient-to-br from-blue-500 to-cyan-400 text-white border-none p-5 rounded-3xl shadow-lg shadow-blue-100">
                     <div className="flex justify-between items-center">
                         <div>
-                            <p className="text-xs md:text-sm font-medium">Status Gizi (IMT/U)</p>
-                            <p className="text-lg md:text-xl font-bold leading-tight">
-                                {currentStatus ? currentStatus.status : 'Pilih Anak'}
-                            </p>
+                            <p className="text-blue-100 text-[10px] font-black uppercase tracking-widest">Tinggi Badan (TB/U)</p>
+                            <h3 className="text-xl font-black mt-1 uppercase">
+                                {currentAnalysis?.heightStatus.status || 'No Data'}
+                            </h3>
                         </div>
-                        <FaHeartbeat className="text-2xl md:text-3xl opacity-50" />
+                        <FaArrowsAltV size={32} className="opacity-30" />
+                    </div>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-emerald-500 to-teal-400 text-white border-none p-5 rounded-3xl shadow-lg shadow-emerald-100">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <p className="text-emerald-100 text-[10px] font-black uppercase tracking-widest">Status Gizi (BB/TB)</p>
+                            <h3 className="text-xl font-black mt-1 uppercase">
+                                {currentAnalysis?.whStatus.status || 'No Data'}
+                            </h3>
+                        </div>
+                        <FaHeartbeat size={32} className="opacity-30" />
                     </div>
                 </Card>
             </div>
 
-            {/* STUNTING ALERT (DASHBOARD WIDE) */}
-            {currentStatus?.stunting?.isStunted && (
+            {/* ALERT POTENSI MASALAH GIZI */}
+            {currentAnalysis && (currentAnalysis.weightStatus.color === 'red' || currentAnalysis.heightStatus.color === 'red') && (
                 <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl flex items-center gap-4 animate-pulse">
-                    <div className="bg-red-100 p-2 rounded-full text-red-600">
-                        <FaExclamationTriangle size={24} />
-                    </div>
+                    <FaExclamationTriangle className="text-red-500 flex-shrink-0" size={24} />
                     <div>
-                        <h4 className="text-red-800 font-bold text-sm">PERHATIAN KHUSUS: POTENSI STUNTING</h4>
-                        <p className="text-red-700 text-xs">
-                            {selectedChild?.name} terdeteksi <b>{currentStatus.stunting.status}</b>. Segera konsultasikan ke dokter atau petugas Puskesmas.
+                        <h4 className="text-red-800 font-black text-xs uppercase tracking-tight">Perhatian Khusus Diperlukan</h4>
+                        <p className="text-red-700 text-xs mt-1">
+                            {selectedChild?.name} terdeteksi memiliki status gizi <b>{currentAnalysis.weightStatus.status}</b> atau <b>{currentAnalysis.heightStatus.status}</b>. Segera hubungi Bidan atau kunjungi Puskesmas terdekat.
                         </p>
                     </div>
                 </div>
             )}
 
-            {/* CHILDREN LIST */}
-            <Card className="p-4 md:p-5">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg md:text-xl font-semibold text-gray-800">Anak Saya</h2>
-                    <Link href="/parent/input" className="text-pink-500 text-sm md:text-base font-bold flex items-center gap-1 hover:underline">
-                        Tambah Data <FaArrowRight size={12} />
-                    </Link>
-                </div>
+            {/* DAFTAR ANAK & SELEKSI */}
+            <Card className="p-5 rounded-3xl border-none shadow-sm">
+                <h2 className="text-lg font-black text-gray-800 mb-6 flex items-center gap-2">
+                    <FaChild className="text-pink-500" /> ANAK SAYA
+                </h2>
 
-                {children.length === 0 ? (
-                    <div className="text-center py-10 text-gray-500 italic border-2 border-dashed rounded-xl">
-                        Belum ada data anak. Silakan tambah anak terlebih dahulu.
-                    </div>
-                ) : (
-                    <div className="space-y-4">
-                        {children.map(child => {
-                            const birthDate = child.birthDate instanceof Date ? child.birthDate : (child.birthDate as any).toDate()
-                            const ageInfo = calculateDetailedAge(birthDate)
-                            const status = getChildNutritionalStatus(child.id)
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {children.map(child => {
+                        const birthDate = child.birthDate instanceof Date ? child.birthDate : (child.birthDate as any).toDate()
+                        const ageInfo = calculateDetailedAge(birthDate)
+                        const analysis = getFullNutritionalAnalysis(child.id)
 
-                            return (
-                                <div
-                                    key={child.id}
-                                    className={`border-2 rounded-xl p-4 transition-all cursor-pointer ${selectedChildId === child.id
-                                        ? 'border-pink-500 bg-pink-50 shadow-md scale-[1.01]'
-                                        : 'border-transparent bg-gray-50 hover:border-pink-200'
-                                        }`}
-                                    onClick={() => setSelectedChildId(child.id)}
-                                >
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <h3 className="font-bold text-gray-800 text-base md:text-lg">{child.name}</h3>
-                                            <p className="text-xs text-gray-500 font-medium">{ageInfo.label}</p>
-                                        </div>
-                                        <div className="flex flex-col items-end gap-2">
-                                            <span className={`px-3 py-1 rounded-full text-[10px] font-bold border ${status.color}`}>
-                                                {status.status}
-                                            </span>
-                                            {status.stunting?.isStunted && (
-                                                <span className="bg-red-500 text-white px-2 py-0.5 rounded text-[9px] font-black uppercase">
-                                                    Stunting
-                                                </span>
-                                            )}
-                                        </div>
+                        return (
+                            <div
+                                key={child.id}
+                                className={`p-5 rounded-2xl border-2 transition-all cursor-pointer ${selectedChildId === child.id
+                                    ? 'border-pink-500 bg-pink-50/50 shadow-md scale-[1.01]'
+                                    : 'border-gray-50 bg-gray-50/50 hover:border-pink-200'
+                                    }`}
+                                onClick={() => setSelectedChildId(child.id)}
+                            >
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h3 className="font-black text-gray-800 uppercase tracking-tight">{child.name}</h3>
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase">{ageInfo.label}</p>
                                     </div>
-                                    <div className="flex justify-between items-center mt-3 text-xs">
-                                        <span className="text-gray-400 font-medium">Update: {getLastUpdate(child.id)}</span>
-                                        <Link href={`/parent/growth-detail/${child.id}`} className="text-pink-600 font-bold hover:underline flex items-center gap-1">
-                                            Analisis Detail <FaArrowRight size={10} />
-                                        </Link>
+                                    <div className="flex flex-col items-end gap-2">
+                                        {analysis && (
+                                            <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black border uppercase ${getBadgeColor(analysis.whStatus.status)}`}>
+                                                {analysis.whStatus.status}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
-                            )
-                        })}
-                    </div>
-                )}
+                                <div className="flex justify-between items-center mt-6">
+                                    <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Terakhir: {getLastUpdateLabel(child.id)}</span>
+                                    <Link href={`/parent/growth-detail/${child.id}`} className="text-pink-600 font-black text-[10px] uppercase flex items-center gap-1 hover:underline">
+                                        Analisis Detail <FaArrowRight />
+                                    </Link>
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
             </Card>
 
-            {/* GROWTH CHART */}
-            <Card className="p-4 md:p-5">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-lg md:text-xl font-semibold text-gray-800">Grafik Perkembangan</h2>
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-2.5 h-2.5 bg-pink-500 rounded-full"></div>
-                            <span className="text-[10px] text-gray-600 font-bold uppercase">Berat</span>
+            {/* GRAFIK Z-SCORE & TREN */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Visualisasi Sebaran Gizi (Z-Score) */}
+                <Card className="p-6 rounded-3xl border-none shadow-sm">
+                    <h2 className="text-sm font-black text-gray-800 mb-6 flex items-center gap-2 uppercase tracking-tight">
+                        <FaChartBar className="text-blue-500" /> Sebaran Z-Score (WHO)
+                    </h2>
+                    {currentAnalysis ? (
+                        <div className="h-[300px]">
+                            <ZScoreChart
+                                zWeightForAge={currentAnalysis.zWeightForAge}
+                                zHeightForAge={currentAnalysis.zHeightForAge}
+                                zWeightForHeight={currentAnalysis.zWeightForHeight}
+                            />
                         </div>
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-2.5 h-2.5 bg-blue-500 rounded-full"></div>
-                            <span className="text-[10px] text-gray-600 font-bold uppercase">Tinggi</span>
+                    ) : (
+                        <div className="h-[300px] flex items-center justify-center border-2 border-dashed rounded-2xl text-gray-400 italic text-xs">
+                            Belum ada data antropometri
                         </div>
-                    </div>
-                </div>
+                    )}
+                </Card>
 
-                {selectedChild ? (
-                    allRecords.filter(r => r.childId === selectedChildId).length > 0 ? (
-                        <>
+                {/* Grafik Perkembangan (BB & TB) */}
+                <Card className="p-6 rounded-3xl border-none shadow-sm">
+                    <h2 className="text-sm font-black text-gray-800 mb-6 flex items-center gap-2 uppercase tracking-tight">
+                        <FaChartLine className="text-pink-500" /> Tren Pertumbuhan
+                    </h2>
+                    {selectedChild && allRecords.filter(r => r.childId === selectedChildId).length > 0 ? (
+                        <div className="h-[300px]">
                             <GrowthChart
                                 data={allRecords
                                     .filter(r => r.childId === selectedChildId)
                                     .sort((a, b) => a.date.getTime() - b.date.getTime())
                                     .map(record => ({
-                                        month: record.date.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' }),
+                                        month: record.date.toLocaleDateString('id-ID', { month: 'short' }),
                                         weight: record.weight,
                                         height: record.height,
                                     }))
                                 }
                                 type="area"
-                                height={250}
+                                height={300}
                             />
-                            <div className="mt-4 p-3 bg-blue-50 rounded-lg text-[11px] text-blue-700 leading-relaxed border border-blue-100">
-                                <b>Tips:</b> Grafik di atas menunjukkan tren pertumbuhan {selectedChild.name}. Pastikan garis cenderung naik setiap bulannya.
-                            </div>
-                        </>
+                        </div>
                     ) : (
-                        <p className="text-center text-gray-400 py-12 italic border-2 border-dashed rounded-xl">
-                            Belum ada data pengukuran untuk {selectedChild.name}.
-                        </p>
-                    )
-                ) : (
-                    <p className="text-center text-gray-400 py-12 italic border-2 border-dashed rounded-xl">
-                        Silakan pilih data anak untuk melihat grafik.
-                    </p>
-                )}
-            </Card>
+                        <div className="h-[300px] flex items-center justify-center border-2 border-dashed rounded-2xl text-gray-400 italic text-xs">
+                            Data pengukuran tidak tersedia
+                        </div>
+                    )}
+                </Card>
+            </div>
         </div>
     )
 }
