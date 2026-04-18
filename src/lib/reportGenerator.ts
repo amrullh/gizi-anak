@@ -6,74 +6,147 @@ import autoTable from 'jspdf-autotable';
 export interface ReportData {
     type: 'monthly' | 'yearly' | 'custom';
     period: string;
+    title?: string;
     stats: {
         totalChildren: number;
-        totalParents: number;
-        goodNutrition: number;
-        warningNutrition: number;
-        badNutrition: number;
-        childrenList: any[]; // Data detail anak
+        childrenList: any[]; // Pastikan data child di sini sudah membawa field 'wilayah'
     };
 }
 
-export function generatePDFReport(data: ReportData) {
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text('LAPORAN MONITORING GIZI & STUNTING', 14, 22);
+export async function generatePDFReport(data: ReportData) {
+    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape biar muat banyak kolom
+    const printDate = new Date().toLocaleDateString('id-ID', {
+        day: '2-digit', month: 'long', year: 'numeric'
+    });
+
+    // 1. LOGIC GROUPING BERDASARKAN WILAYAH
+    const groupedByWilayah = data.stats.childrenList.reduce((acc: any, child) => {
+        const wilayah = child.wilayah || 'WILAYAH TIDAK TERDAFTAR';
+        if (!acc[wilayah]) acc[wilayah] = [];
+        acc[wilayah].push(child);
+        return acc;
+    }, {});
+
+    const wilayahKeys = Object.keys(groupedByWilayah).sort();
+
+    // HEADER HALAMAN UTAMA
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text((data.title || 'LAPORAN AUDIT GIZI ANAK').toUpperCase(), 14, 15);
 
     doc.setFontSize(10);
-    doc.text(`Periode: ${data.period} | Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}`, 14, 30);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Periode: ${data.period} | Tanggal Cetak: ${printDate}`, 14, 22);
 
-    // Ringkasan Statistik
-    autoTable(doc, {
-        startY: 40,
-        head: [['Indikator Statistik', 'Jumlah']],
-        body: [
-            ['Total Anak Terdaftar', data.stats.totalChildren.toString()],
-            ['Total Orang Tua', data.stats.totalParents.toString()],
-            ['Kondisi Gizi Baik', data.stats.goodNutrition.toString()],
-            ['Kasus Perlu Tindakan (Stunting/Wasting)', data.stats.warningNutrition.toString()],
-        ],
-        theme: 'striped',
-        headStyles: { fillColor: [100, 100, 255] }
+    let finalY = 30;
+
+    // 2. LOOPING PER WILAYAH
+    wilayahKeys.forEach((wilayah, index) => {
+        // Jika tabel wilayah sebelumnya terlalu panjang, autoTable akan handle page break, 
+        // tapi kita tambahkan jarak antar wilayah.
+        if (index > 0) finalY += 15;
+
+        // Header Sub-Wilayah
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.setFillColor(245, 245, 245); // Abu-abu muda
+        doc.rect(14, finalY, 268, 8, 'F');
+        doc.text(`WILAYAH PUSKESMAS: ${wilayah.toUpperCase()}`, 18, finalY + 6);
+
+        autoTable(doc, {
+            startY: finalY + 10,
+            head: [[
+                'NO', 'NAMA ANAK', 'L/P', 'USIA', 'BERAT', 'TINGGI',
+                'BB/U (Berat)', 'TB/U (Tinggi)', 'BB/TB (Gizi)'
+            ]],
+            body: groupedByWilayah[wilayah].map((c: any, i: number) => [
+                i + 1,
+                c.name.toUpperCase(),
+                c.gender === 'male' ? 'L' : 'P',
+                c.ageLabel,
+                c.weight,
+                c.height,
+                c.bbu,
+                c.tbu,
+                c.bbtb
+            ]),
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [31, 41, 55] }, // Gray-800
+            columnStyles: {
+                0: { halign: 'center', cellWidth: 10 },
+                2: { halign: 'center', cellWidth: 10 },
+                6: { fontStyle: 'bold' },
+                7: { fontStyle: 'bold' },
+                8: { fontStyle: 'bold' },
+            },
+            didParseCell: (data) => {
+                const statusGizi = data.row.cells[8].text[0];
+                if (data.section === 'body') {
+                    if (statusGizi?.includes('Buruk') || statusGizi?.includes('Sangat')) {
+                        data.cell.styles.textColor = [220, 38, 38];
+                    } else if (statusGizi?.includes('Kurang') || statusGizi?.includes('Risiko')) {
+                        data.cell.styles.textColor = [217, 119, 6];
+                    }
+                }
+            }
+        });
+
+        finalY = (doc as any).lastAutoTable.finalY;
     });
 
-    // Tabel Detail Anak (Sesuai Permintaan)
-    doc.text('DAFTAR DETAIL ANAK & STATUS ANTROPOMETRI', 14, (doc as any).lastAutoTable.finalY + 15);
-    autoTable(doc, {
-        startY: (doc as any).lastAutoTable.finalY + 20,
-        head: [['Nama Anak', 'L/P', 'Usia', 'BB/TB', 'Status IMT/U', 'Status TB/U (Stunting)']],
-        body: data.stats.childrenList.map(c => [
-            c.name, c.gender, c.ageLabel, `${c.weight}/${c.height}`, c.imtStatus, c.tbuStatus
-        ]),
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [255, 100, 150] }
-    });
-
-    doc.save(`Laporan_Gizi_${data.period}.pdf`);
+    doc.save(`Laporan_Gizi_Wilayah_${data.period.replace(/\s/g, '_')}.pdf`);
 }
 
 export function generateExcelReport(data: ReportData) {
-    const wsData = [
-        ['LAPORAN MONITORING GIZI ANAK'],
-        [`Periode: ${data.period}`],
-        [],
-        ['RINGKASAN STATISTIK'],
-        ['Total Anak', data.stats.totalChildren],
-        ['Gizi Baik', data.stats.goodNutrition],
-        ['Waspada', data.stats.warningNutrition],
-        [],
-        ['DAFTAR DETAIL ANAK'],
-        ['Nama Anak', 'Gender', 'Usia', 'BB/TB', 'Status IMT/U', 'Status TB/U (Stunting)'],
-        ...data.stats.childrenList.map(c => [
-            c.name, c.gender, c.ageLabel, `${c.weight}/${c.height}`, c.imtStatus, c.tbuStatus
-        ]),
-    ];
-
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    XLSX.utils.book_append_sheet(wb, ws, 'Laporan_Gizi');
+
+    // 1. GROUPING BERDASARKAN WILAYAH
+    const groupedByWilayah = data.stats.childrenList.reduce((acc: any, child) => {
+        const wilayah = child.wilayah || 'Tanpa_Wilayah';
+        if (!acc[wilayah]) acc[wilayah] = [];
+        acc[wilayah].push(child);
+        return acc;
+    }, {});
+
+    const wilayahKeys = Object.keys(groupedByWilayah).sort();
+
+    // 2. BUAT SHEET TERPISAH UNTUK SETIAP WILAYAH
+    wilayahKeys.forEach((wilayah) => {
+        const wsData = [
+            [`LAPORAN GIZI PUSKESMAS: ${wilayah.toUpperCase()}`],
+            [`Periode: ${data.period}`],
+            [],
+            [
+                'NO', 'NAMA ANAK', 'GENDER', 'LABEL USIA', 'BERAT (KG)',
+                'TINGGI (CM)', 'STATUS BB/U', 'STATUS TB/U (STUNTING)', 'STATUS BB/TB (GIZI)'
+            ],
+            ...groupedByWilayah[wilayah].map((c: any, i: number) => [
+                i + 1,
+                c.name,
+                c.gender,
+                c.ageLabel,
+                c.weight,
+                c.height,
+                c.bbu,
+                c.tbu,
+                c.bbtb
+            ]),
+        ];
+
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+        // Atur Lebar Kolom
+        ws['!cols'] = [
+            { wch: 5 }, { wch: 30 }, { wch: 10 }, { wch: 15 },
+            { wch: 12 }, { wch: 12 }, { wch: 20 }, { wch: 25 }, { wch: 25 }
+        ];
+
+        // Nama Sheet tidak boleh lebih dari 31 karakter dan tidak boleh mengandung karakter khusus tertentu
+        const safeSheetName = wilayah.replace(/[\\*?\/\[\]]/g, '').substring(0, 30);
+        XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
+    });
+
     const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(blob, `Laporan_Gizi_${data.period}.xlsx`);
+    saveAs(blob, `Laporan_Gizi_Wilayah_${data.period.replace(/\s/g, '_')}.xlsx`);
 }
