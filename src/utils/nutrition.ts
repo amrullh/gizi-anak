@@ -1,124 +1,195 @@
-/**
- * DATA REFERENSI STANDAR ANTROPOMETRI WHO/KEMENKES 2020
- * Median & Standar Deviasi (SD) untuk menghitung Z-Score
- */
-
-interface GrowthReference {
-    [month: number]: { median: number; sd: number };
-}
-
-// --- DATA ANAK PEREMPUAN ---
-const HEIGHT_REF_GIRLS: GrowthReference = {
-    0: { median: 49.1, sd: 1.9 }, 6: { median: 65.7, sd: 2.3 }, 12: { median: 74.0, sd: 2.6 },
-    18: { median: 80.7, sd: 2.9 }, 24: { median: 86.4, sd: 3.2 }, 30: { median: 91.3, sd: 3.5 },
-    36: { median: 95.1, sd: 3.8 }, 40: { median: 97.7, sd: 4.0 }, 42: { median: 99.0, sd: 4.1 },
-    48: { median: 102.7, sd: 4.3 }, 54: { median: 106.2, sd: 4.5 }, 60: { median: 109.4, sd: 4.8 }
-};
-
-const BMI_REF_GIRLS: GrowthReference = {
-    0: { median: 13.3, sd: 1.1 }, 6: { median: 16.0, sd: 1.1 }, 12: { median: 16.3, sd: 1.2 },
-    18: { median: 16.0, sd: 1.2 }, 24: { median: 15.7, sd: 1.2 }, 30: { median: 15.4, sd: 1.2 },
-    36: { median: 15.3, sd: 1.2 }, 40: { median: 15.2, sd: 1.2 }, 42: { median: 15.2, sd: 1.2 },
-    48: { median: 15.0, sd: 1.3 }, 54: { median: 14.9, sd: 1.4 }, 60: { median: 14.8, sd: 1.5 }
-};
-
-// --- DATA ANAK LAKI-LAKI ---
-const HEIGHT_REF_BOYS: GrowthReference = {
-    0: { median: 49.9, sd: 1.9 }, 6: { median: 67.6, sd: 2.3 }, 12: { median: 75.7, sd: 2.6 },
-    18: { median: 82.3, sd: 2.9 }, 24: { median: 87.8, sd: 3.2 }, 30: { median: 92.4, sd: 3.5 },
-    36: { median: 96.1, sd: 3.8 }, 40: { median: 98.6, sd: 4.0 }, 42: { median: 99.9, sd: 4.1 },
-    48: { median: 103.3, sd: 4.3 }, 54: { median: 106.7, sd: 4.5 }, 60: { median: 110.0, sd: 4.8 }
-};
-
-const BMI_REF_BOYS: GrowthReference = {
-    0: { median: 13.4, sd: 1.1 }, 6: { median: 16.8, sd: 1.1 }, 12: { median: 17.1, sd: 1.2 },
-    18: { median: 16.7, sd: 1.2 }, 24: { median: 16.3, sd: 1.2 }, 30: { median: 16.0, sd: 1.2 },
-    36: { median: 15.8, sd: 1.2 }, 40: { median: 15.7, sd: 1.2 }, 42: { median: 15.6, sd: 1.3 },
-    48: { median: 15.5, sd: 1.3 }, 54: { median: 15.3, sd: 1.4 }, 60: { median: 15.2, sd: 1.5 }
-};
+// utils/nutrition.ts
+import {
+  SDPoints,
+  findNearestRef,
+  weightForAgeBoys,
+  weightForAgeGirls,
+  lengthForAgeBoys,
+  lengthForAgeGirls,
+  heightForAgeBoys,
+  heightForAgeGirls,
+  weightForLengthBoys,
+  weightForLengthGirls,
+  weightForHeightBoys,
+  weightForHeightGirls,
+} from './antropometriTables';
 
 /**
- * MENGHITUNG Z-SCORE
+ * Menghitung Z-Score berdasarkan rumus asimetris Permenkes 2020
+ * Jika nilai > median: (nilai - median) / (p1 - median)
+ * Jika nilai < median: (nilai - median) / (median - m1)
  */
-function calculateZScore(value: number, month: number, reference: GrowthReference): number {
-    const keys = Object.keys(reference).map(Number).sort((a, b) => a - b);
-    let closestMonth = keys[0];
-    for (const m of keys) {
-        if (month >= m) closestMonth = m;
-        else break;
-    }
-    const ref = reference[closestMonth];
-    return (value - ref.median) / ref.sd;
+function calculateZScore(observed: number, ref: SDPoints): number {
+  if (observed === ref.median) return 0;
+  if (observed > ref.median) {
+    return (observed - ref.median) / (ref.p1 - ref.median);
+  } else {
+    return (observed - ref.median) / (ref.median - ref.m1);
+  }
 }
 
+/**
+ * Koreksi panjang/tinggi badan sesuai metode pengukuran (Permenkes Pasal 4)
+ * Anak 0-24 bulan diukur terlentang (PB), jika diukur berdiri => +0.7 cm
+ * Anak >24 bulan diukur berdiri (TB), jika diukur terlentang => -0.7 cm
+ */
+export function getCorrectedHeight(height: number, ageMonths: number, measurementMethod: 'baring' | 'berdiri'): number {
+  if (ageMonths < 24 && measurementMethod === 'berdiri') {
+    return height + 0.7;
+  } else if (ageMonths >= 24 && measurementMethod === 'baring') {
+    return height - 0.7;
+  }
+  return height;
+}
+
+/**
+ * Hitung usia detail (tahun, bulan, hari)
+ */
 export function calculateDetailedAge(birthDate: Date, referenceDate: Date = new Date()) {
-    let years = referenceDate.getFullYear() - birthDate.getFullYear();
-    let months = referenceDate.getMonth() - birthDate.getMonth();
-    let days = referenceDate.getDate() - birthDate.getDate();
+  let years = referenceDate.getFullYear() - birthDate.getFullYear();
+  let months = referenceDate.getMonth() - birthDate.getMonth();
+  let days = referenceDate.getDate() - birthDate.getDate();
 
-    // 1. Logika Pinjam Hari (sesuai poin 2 di gambar)
-    if (days < 0) {
-        days += 30; // Pinjam 30 hari
-        months--;
-    }
+  if (days < 0) {
+    const lastMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 0);
+    days += lastMonth.getDate();
+    months--;
+  }
+  if (months < 0) {
+    months += 12;
+    years--;
+  }
 
-    // 2. Logika Pinjam Bulan (sesuai poin 3 di gambar)
-    if (months < 0) {
-        months += 12; // Pinjam 12 bulan
-        years--;
-    }
-
-    // 3. HITUNG TOTAL BULAN DENGAN PEMBULATAN (sesuai instruksi kuning di gambar)
-    let totalMonths = (years * 12) + months;
-
-    // "Jika jumlah hari >= 15 hari hitungan usia bertambah 1 bln"
-    if (days >= 15) {
-        totalMonths += 1;
-    }
-    // Jika < 15 hari, dibiarkan saja (diabaikan)
-
-    return {
-        totalMonths,
-        years,
-        months,
-        days,
-        label: years > 0
-            ? `${years} thn ${months} bln ${days} hr`
-            : `${months} bln ${days} hr`
-    };
+  const totalMonths = years * 12 + months;
+  return {
+    totalMonths,
+    days,
+    label: `${totalMonths} bln ${days} hr`,
+    years,
+    months,
+  };
 }
 
+/**
+ * Menentukan status gizi berdasarkan Z-Score dan kategori Permenkes 2020
+ */
+function getNutritionStatus(zScore: number, type: 'weight' | 'height' | 'weightForHeight'): {
+  status: string;
+  color: 'green' | 'orange' | 'red';
+} {
+  if (type === 'weight') {
+    // BB/U
+    if (zScore < -3) return { status: 'Berat Badan Sangat Kurang (Severely Underweight)', color: 'red' };
+    if (zScore < -2) return { status: 'Berat Badan Kurang (Underweight)', color: 'orange' };
+    if (zScore <= 1) return { status: 'Berat Badan Normal', color: 'green' };
+    return { status: 'Risiko Berat Badan Lebih', color: 'orange' };
+  } else if (type === 'height') {
+    // TB/U atau PB/U
+    if (zScore < -3) return { status: 'Sangat Pendek (Severely Stunted)', color: 'red' };
+    if (zScore < -2) return { status: 'Pendek (Stunted)', color: 'orange' };
+    if (zScore <= 3) return { status: 'Normal', color: 'green' };
+    return { status: 'Tinggi', color: 'green' };
+  } else {
+    // BB/PB atau BB/TB
+    if (zScore < -3) return { status: 'Gizi Buruk (Severely Wasted)', color: 'red' };
+    if (zScore < -2) return { status: 'Gizi Kurang (Wasted)', color: 'orange' };
+    if (zScore <= 1) return { status: 'Gizi Baik (Normal)', color: 'green' };
+    if (zScore <= 2) return { status: 'Berisiko Gizi Lebih', color: 'orange' };
+    if (zScore <= 3) return { status: 'Gizi Lebih (Overweight)', color: 'orange' };
+    return { status: 'Obesitas (Obese)', color: 'red' };
+  }
+}
+
+/**
+ * Analisis status gizi lengkap (BB/U, TB/U, BB/TB) berdasarkan Permenkes 2/2020
+ */
 export function calculateNutritionalStatus(
-    ageMonths: number,
-    gender: 'male' | 'female',
-    weight: number,
-    height: number
+  ageMonths: number,
+  gender: 'male' | 'female',
+  weight: number,
+  height: number,
+  measurementMethod: 'baring' | 'berdiri'
 ) {
-    const heightM = height / 100;
-    const bmi = weight / (heightM * heightM);
+  // 1. Koreksi tinggi badan sesuai metode
+  const finalHeight = getCorrectedHeight(height, ageMonths, measurementMethod);
 
-    // 1. Pilih referensi berdasarkan gender
-    const bmiRef = gender === 'female' ? BMI_REF_GIRLS : BMI_REF_BOYS;
-    const heightRef = gender === 'female' ? HEIGHT_REF_GIRLS : HEIGHT_REF_BOYS;
+  // 2. Pilih data referensi berdasarkan gender
+  const weightRef = findNearestRef(
+    gender === 'male' ? weightForAgeBoys : weightForAgeGirls,
+    ageMonths
+  );
 
-    // 2. Hitung Z-Score
-    const zBmi = calculateZScore(bmi, ageMonths, bmiRef);
-    const zHeight = calculateZScore(height, ageMonths, heightRef);
+  let heightRef = null;
+  if (ageMonths < 24) {
+    heightRef = findNearestRef(
+      gender === 'male' ? lengthForAgeBoys : lengthForAgeGirls,
+      ageMonths
+    );
+  } else {
+    heightRef = findNearestRef(
+      gender === 'male' ? heightForAgeBoys : heightForAgeGirls,
+      ageMonths
+    );
+  }
 
-    // LOGIKA GIZI (Wasting/BMI-for-Age)
-    let nutrition = { status: 'Gizi Baik (Normal)', color: 'green' };
-    if (zBmi < -3) nutrition = { status: 'Gizi Buruk (Malnutrisi)', color: 'red' };
-    else if (zBmi < -2) nutrition = { status: 'Gizi Kurang (Wasted)', color: 'orange' };
-    else if (zBmi > 3) nutrition = { status: 'Obesitas', color: 'red' };
-    else if (zBmi > 2) nutrition = { status: 'Gizi Lebih (Overweight)', color: 'orange' };
+  // Untuk BB/PB atau BB/TB
+  const heightCmRounded = Math.round(finalHeight);
+  let whRef = null;
+  if (ageMonths < 24) {
+    whRef = findNearestRef(
+      gender === 'male' ? weightForLengthBoys : weightForLengthGirls,
+      heightCmRounded
+    );
+  } else {
+    whRef = findNearestRef(
+      gender === 'male' ? weightForHeightBoys : weightForHeightGirls,
+      heightCmRounded
+    );
+  }
 
-    // LOGIKA STUNTING (Height-for-Age)
-    let stunting = { status: 'Normal', color: 'green', isStunted: false };
-    if (zHeight < -3) {
-        stunting = { status: 'Sangat Pendek (Stunting)', color: 'red', isStunted: true };
-    } else if (zHeight < -2) {
-        stunting = { status: 'Pendek (Berpotensi Stunting)', color: 'orange', isStunted: true };
-    }
+  // 3. Hitung Z-Score masing-masing indeks
+  let zWeightForAge: number | null = null;
+  let zHeightForAge: number | null = null;
+  let zWeightForHeight: number | null = null;
 
-    return { nutrition, stunting, zBmi: zBmi.toFixed(2), zHeight: zHeight.toFixed(2) };
+  if (weightRef && weight > 0) {
+    zWeightForAge = calculateZScore(weight, weightRef);
+  }
+  if (heightRef && finalHeight > 0) {
+    zHeightForAge = calculateZScore(finalHeight, heightRef);
+  }
+  if (whRef && weight > 0 && finalHeight > 0) {
+    zWeightForHeight = calculateZScore(weight, whRef);
+  }
+
+  // 4. Dapatkan status gizi
+  const weightStatus = zWeightForAge !== null
+    ? getNutritionStatus(zWeightForAge, 'weight')
+    : { status: 'Tidak ada data', color: 'gray' as const };
+
+  const heightStatus = zHeightForAge !== null
+    ? getNutritionStatus(zHeightForAge, 'height')
+    : { status: 'Tidak ada data', color: 'gray' as const };
+
+  const whStatus = zWeightForHeight !== null
+    ? getNutritionStatus(zWeightForHeight, 'weightForHeight')
+    : { status: 'Tidak ada data', color: 'gray' as const };
+
+  // Cari bagian return di paling bawah fungsi calculateNutritionalStatus dalam file nutrition.ts
+  return {
+    zWeightForAge: zWeightForAge !== null ? zWeightForAge.toFixed(2) : null,
+    zHeightForAge: zHeightForAge !== null ? zHeightForAge.toFixed(2) : null,
+    zWeightForHeight: zWeightForHeight !== null ? zWeightForHeight.toFixed(2) : null,
+    weightStatus,
+    heightStatus,
+    whStatus,
+    // Tambahkan flag ini untuk memudahkan pengecekan di Hook/Komponen
+    isStunted: zHeightForAge !== null && zHeightForAge < -2,
+    isWasted: zWeightForHeight !== null && zWeightForHeight < -2,
+    // Alias untuk kompatibilitas
+    nutrition: weightStatus,
+    stunting: heightStatus,
+    wasted: whStatus,
+  };
+
 }
