@@ -111,9 +111,9 @@ export default function Home() {
             transition={{ duration: 0.8 }}
             className="text-5xl md:text-7xl font-bold tracking-tight mb-4"
           >
-            Pantau Gizi <br />
+            Monitoring <br />
             <span className="text-pink-500 relative">
-              Si Kecil
+              MOP
               <svg className="absolute -bottom-3 left-0 w-full" height="10" viewBox="0 0 200 10">
                 <path d="M0,5 Q25,0 50,5 T100,5 T150,5 T200,5" stroke="#f472b6" strokeWidth="2" fill="none" strokeDasharray="5 5">
                   <animate attributeName="stroke-dashoffset" from="0" to="20" dur="1s" repeatCount="indefinite" />

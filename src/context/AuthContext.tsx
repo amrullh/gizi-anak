@@ -26,8 +26,8 @@ interface User {
     age?: number;
     lila?: number;
     isPregnant?: boolean;
-    wilayah?: string; // Kunci utama untuk klasifikasi kerja Bidan & Parent
-    bidanId?: string; // Tambahkan field bidanId untuk orang tua
+    wilayah?: string;
+    bidanId?: string;
 }
 
 interface AuthContextType {
@@ -46,8 +46,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // Helper untuk mengubah nomor telepon menjadi format email virtual Firebase
-    const formatEmail = (phone: string) => `${phone.trim()}@gizianak.local`;
+    /**
+     * FIX: Helper untuk format email
+     * 1. Menghapus semua karakter non-angka (spasi, strip, dll)
+     * 2. Menggunakan domain .com agar SINKRON dengan database Firebase kamu
+     */
+    const formatEmail = (phone: string) => {
+        const cleanPhone = phone.replace(/\D/g, '');
+        return `${cleanPhone}@gizianak.com`;
+    };
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -81,19 +88,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return unsubscribe;
     }, []);
 
+    // LOGIN: Sekarang otomatis pakai @gizianak.com
     const login = async (phone: string, password: string) => {
         const email = formatEmail(phone);
         await signInWithEmailAndPassword(auth, email, password);
     };
 
-    // Register biasa (untuk pendaftaran mandiri, misalnya dari mobile)
+    // REGISTER MANDIRI
     const register = async (phone: string, password: string, name: string, role: string, wilayah?: string) => {
         const email = formatEmail(phone);
+        const cleanPhone = phone.replace(/\D/g, '');
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
         await setDoc(doc(db, 'users', userCredential.user.uid), {
             name,
-            phone,
+            phone: cleanPhone,
             email,
             role,
             wilayah: wilayah || '',
@@ -102,10 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
     };
 
-    /**
-     * Mendaftarkan user melalui API (Firebase Admin SDK)
-     * REVISI: Menambahkan parameter bidanId dan mengirimkannya ke API
-     */
+    // REGISTER BY ADMIN (Lewat API Route)
     const registerByAdmin = async (
         phone: string,
         password: string,
@@ -114,19 +120,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         wilayah?: string,
         bidanId?: string
     ): Promise<string> => {
-        const email = formatEmail(phone);
+        const cleanPhone = phone.replace(/\D/g, '');
 
-        // Pastikan endpoint API sesuai dengan yang sudah dibuat (POST /api/users/create)
+        // Kirim data ke API Admin SDK kita
         const response = await fetch('/api/admin/create-user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                phone,
+                phone: cleanPhone, // Kirim nomor bersih saja
                 password,
                 name,
                 role,
                 wilayah: wilayah || '',
-                bidanId: bidanId || '' // Kirim bidanId untuk role parent
+                bidanId: bidanId || ''
             }),
         });
 
