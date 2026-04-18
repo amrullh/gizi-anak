@@ -27,6 +27,7 @@ interface User {
     lila?: number;
     isPregnant?: boolean;
     wilayah?: string; // Kunci utama untuk klasifikasi kerja Bidan & Parent
+    bidanId?: string; // Tambahkan field bidanId untuk orang tua
 }
 
 interface AuthContextType {
@@ -34,7 +35,7 @@ interface AuthContextType {
     loading: boolean;
     login: (phone: string, password: string) => Promise<void>;
     register: (phone: string, password: string, name: string, role: string, wilayah?: string) => Promise<void>;
-    registerByAdmin: (phone: string, password: string, name: string, role: string, wilayah?: string) => Promise<string>;
+    registerByAdmin: (phone: string, password: string, name: string, role: string, wilayah?: string, bidanId?: string) => Promise<string>;
     logout: () => Promise<void>;
     updateUser: (data: Partial<User>) => Promise<void>;
 }
@@ -85,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await signInWithEmailAndPassword(auth, email, password);
     };
 
-    // REVISI: Menambahkan parameter wilayah pada register standar
+    // Register biasa (untuk pendaftaran mandiri, misalnya dari mobile)
     const register = async (phone: string, password: string, name: string, role: string, wilayah?: string) => {
         const email = formatEmail(phone);
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -95,29 +96,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             phone,
             email,
             role,
-            wilayah: wilayah || '', // Simpan wilayah jika diinput saat register
+            wilayah: wilayah || '',
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         });
     };
 
     /**
-     * Mendaftarkan user melalui API (Firebase Admin SDK) 
-     * REVISI: Memastikan wilayah diteruskan ke body request API
+     * Mendaftarkan user melalui API (Firebase Admin SDK)
+     * REVISI: Menambahkan parameter bidanId dan mengirimkannya ke API
      */
-    const registerByAdmin = async (phone: string, password: string, name: string, role: string, wilayah?: string) => {
+    const registerByAdmin = async (
+        phone: string,
+        password: string,
+        name: string,
+        role: string,
+        wilayah?: string,
+        bidanId?: string
+    ): Promise<string> => {
         const email = formatEmail(phone);
 
+        // Pastikan endpoint API sesuai dengan yang sudah dibuat (POST /api/users/create)
         const response = await fetch('/api/admin/create-user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                email,
+                phone,
                 password,
                 name,
                 role,
-                phone,
-                wilayah: wilayah || '' // Pastikan string kosong jika tidak ada wilayah
+                wilayah: wilayah || '',
+                bidanId: bidanId || '' // Kirim bidanId untuk role parent
             }),
         });
 
