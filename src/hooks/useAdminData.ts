@@ -1,16 +1,14 @@
-// src/hooks/useAdminData.ts
 'use client';
 
 import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client'; // Pastikan import db dari client
-import { useAuth } from '@/context/AuthContext'; // Tambahkan ini untuk cek role & wilayah
-import { Child } from '@/types/child';
+import { db } from '@/lib/firebase/client';
+import { useAuth } from '@/context/AuthContext';
 import { GrowthRecord } from '@/types/growth';
 import { calculateNutritionalStatus, calculateDetailedAge } from '@/utils/nutrition';
 
 export function useAdminData() {
-    const { user } = useAuth(); // Ambil context user
+    const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [childrenData, setChildrenData] = useState<any[]>([]);
     const [stats, setStats] = useState({
@@ -23,18 +21,25 @@ export function useAdminData() {
 
     useEffect(() => {
         const fetchData = async () => {
-            // Pastikan data user sudah tersedia sebelum melakukan query
             if (!user) return;
 
             setLoading(true);
             try {
                 const isBidan = user.role === 'bidan';
-                const wilayahUser = user.wilayah;
 
-                // 1. Filter Orang Tua berdasarkan Wilayah (Jika Bidan)
-                let parentsBaseQuery = query(collection(db, 'users'), where('role', '==', 'parent'));
-                if (isBidan && wilayahUser) {
-                    parentsBaseQuery = query(parentsBaseQuery, where('wilayah', '==', wilayahUser));
+                // 1. QUERY PARENTS (Isolasi Data)
+                let parentsBaseQuery;
+                if (isBidan) {
+                    parentsBaseQuery = query(
+                        collection(db, 'users'),
+                        where('role', '==', 'parent'),
+                        where('bidanId', '==', user.uid)
+                    );
+                } else {
+                    parentsBaseQuery = query(
+                        collection(db, 'users'),
+                        where('role', '==', 'parent')
+                    );
                 }
 
                 const parentsSnap = await getDocs(parentsBaseQuery);
@@ -45,42 +50,28 @@ export function useAdminData() {
                     const data = doc.data();
                     parentsMap.set(doc.id, {
                         name: data.name || 'Unknown',
-                        phone: data.phone || ''
+                        phone: data.phone || '',
+                        wilayah: data.wilayah || '-'
                     });
                 });
 
-                // 2. Filter Anak berdasarkan ID Orang Tua yang sudah terfilter (Jika Bidan)
+                // 2. QUERY CHILDREN
                 let childrenSnapDocs: any[] = [];
-                if (isBidan) {
-                    if (validParentIds.length > 0) {
-                        // Ambil hanya anak yang orang tuanya ada di wilayah tersebut
-                        const qChild = query(collection(db, 'children'), where('userId', 'in', validParentIds));
-                        const snap = await getDocs(qChild);
-                        childrenSnapDocs = snap.docs;
-                    } else {
-                        childrenSnapDocs = [];
-                    }
-                } else {
-                    // Admin Pusat: Ambil semua anak
-                    const snap = await getDocs(collection(db, 'children'));
+                if (validParentIds.length > 0) {
+                    const qChild = query(collection(db, 'children'), where('userId', 'in', validParentIds));
+                    const snap = await getDocs(qChild);
                     childrenSnapDocs = snap.docs;
                 }
 
-                // 3. Fetch data lainnya (Artikel & Records tetap diambil semua untuk referensi)
+                // 3. FETCH GLOBAL DATA
                 const [articlesSnap, recordsSnap] = await Promise.all([
                     getDocs(collection(db, 'articles')),
                     getDocs(collection(db, 'growthRecords'))
                 ]);
 
-                // Mapping Records
                 const records = recordsSnap.docs.map(doc => {
                     const d = doc.data();
-                    let dateObj = new Date();
-                    if (d.date?.seconds) {
-                        dateObj = new Date(d.date.seconds * 1000);
-                    } else if (d.date) {
-                        dateObj = new Date(d.date);
-                    }
+                    let dateObj = d.date?.seconds ? new Date(d.date.seconds * 1000) : new Date(d.date || Date.now());
                     return { ...d, id: doc.id, date: dateObj };
                 }) as GrowthRecord[];
 
@@ -92,84 +83,94 @@ export function useAdminData() {
                     }
                 });
 
-                // 4. Gabungkan Data Anak yang sudah terfilter
+                // 4. DATA ENHANCEMENT
                 let goodCount = 0;
                 const alertList: any[] = [];
 
                 const enhancedChildren = childrenSnapDocs.map(doc => {
-                    const child = { id: doc.id, ...doc.data() } as any;
+                    const childData = doc.data();
+                    const child = { id: doc.id, ...childData } as any;
                     const latest = latestRecordsMap.get(child.id);
                     const parentInfo = parentsMap.get(child.userId);
 
-                    let birthDate = new Date();
-                    if (child.birthDate?.seconds) {
-                        birthDate = new Date(child.birthDate.seconds * 1000);
-                    } else if (child.birthDate) {
-                        birthDate = new Date(child.birthDate);
-                    }
+                    let birthDate = child.birthDate?.seconds
+                        ? new Date(child.birthDate.seconds * 1000)
+                        : new Date(child.birthDate || Date.now());
 
                     const referenceDate = latest?.date || new Date();
                     const ageData = calculateDetailedAge(birthDate, referenceDate);
+
                     const weightVal = latest?.weight || 0;
                     const heightVal = latest?.height || 0;
 
+                    // FIX: Tambahkan argumen ke-5 (baring/berdiri)
                     const result = calculateNutritionalStatus(
                         ageData.totalMonths,
-                        child.gender,
+                        child.gender as 'male' | 'female',
                         weightVal,
-                        heightVal
+                        heightVal,
+                        ageData.totalMonths < 24 ? 'baring' : 'berdiri'
                     );
 
-                    if (weightVal > 0 && result.nutrition.color === 'green') {
+                    // Pengecekan status menggunakan flag yang baru kita buat di utils
+                    const isStunted = result.isStunted;
+                    const isGoodNutrition = weightVal > 0 && result.weightStatus.color === 'green' && !isStunted;
+
+                    if (isGoodNutrition) {
                         goodCount++;
                     }
 
-                    if (weightVal > 0 && (result.nutrition.color !== 'green' || result.stunting.isStunted)) {
+                    // Alert jika ada masalah (Gizi Kurang/Buruk ATAU Stunting)
+                    if (weightVal > 0 && (result.weightStatus.color !== 'green' || isStunted)) {
                         alertList.push({
                             id: child.id,
                             name: child.name,
                             age: ageData.label,
-                            status: `${result.nutrition.status}${result.stunting.isStunted ? ' & ' + result.stunting.status : ''}`,
-                            color: result.stunting.isStunted ? 'red' : result.nutrition.color,
+                            status: `${result.weightStatus.status}${isStunted ? ' & ' + result.heightStatus.status : ''}`,
+                            color: isStunted ? 'red' : result.weightStatus.color,
                             parent: parentInfo?.name || 'Unknown',
                             phone: parentInfo?.phone || '',
-                            days: Math.floor((new Date().getTime() - (latest?.date?.getTime() || 0)) / (1000 * 60 * 60 * 24))
+                            wilayah: parentInfo?.wilayah || '-',
+                            lastCheck: latest?.date ? latest.date.toLocaleDateString('id-ID') : '-'
                         });
                     }
 
                     return {
                         ...child,
                         parentName: parentInfo?.name || '-',
+                        wilayah: parentInfo?.wilayah || '-',
                         weightVal,
                         heightVal,
                         ageInMonths: ageData.totalMonths,
                         ageLabel: ageData.label,
-                        imtStatus: weightVal > 0 ? result.nutrition.status : 'Data Kosong',
-                        tbuStatus: heightVal > 0 ? result.stunting.status : 'Data Kosong',
-                        lastUpdate: latest?.date ? ageData.label : '-'
+                        imtStatus: weightVal > 0 ? result.weightStatus.status : 'Belum ada data',
+                        tbuStatus: heightVal > 0 ? result.heightStatus.status : 'Belum ada data',
+                        statusColor: isStunted ? 'red' : result.weightStatus.color,
                     };
                 });
 
-                // 5. Update States Utama
+                // 5. SET FINAL STATES
                 setChildrenData(enhancedChildren);
                 setStats({
                     totalChildren: enhancedChildren.length,
                     totalParents: parentsSnap.size,
                     totalArticles: articlesSnap.size,
-                    goodNutritionPercentage: enhancedChildren.length > 0 ? Math.round((goodCount / enhancedChildren.length) * 100) : 0,
+                    goodNutritionPercentage: enhancedChildren.length > 0
+                        ? Math.round((goodCount / enhancedChildren.length) * 100)
+                        : 0,
                 });
 
                 setAlerts(alertList.sort((a, b) => (a.color === 'red' ? -1 : 1)));
 
             } catch (error) {
-                console.error('Error fetching admin dashboard data:', error);
+                console.error('Error fetching admin data:', error);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchData();
-    }, [user]); // Re-fetch jika data user berubah
+    }, [user]);
 
     return { loading, stats, alerts, childrenData };
 }

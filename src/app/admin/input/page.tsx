@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FaSearch, FaBaby, FaSpinner, FaArrowLeft, FaEdit, FaHistory, FaWeight, FaRulerVertical, FaCalendarAlt, FaCalculator } from 'react-icons/fa';
+import { FaSearch, FaBaby, FaSpinner, FaArrowLeft, FaEdit, FaHistory, FaWeight, FaRulerVertical, FaCalendarAlt, FaCalculator, FaUserCircle } from 'react-icons/fa';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { db } from '@/lib/firebase/client';
@@ -9,7 +9,6 @@ import { collection, query, where, getDocs, orderBy, limit } from 'firebase/fire
 import { useChildren } from '@/hooks/useChildren';
 import { useGrowthRecords } from '@/hooks/useGrowthRecords';
 import { useAuth } from '@/context/AuthContext';
-// Import utilitas perhitungan usia yang sudah direvisi sesuai standar klien
 import { calculateDetailedAge } from '@/utils/nutrition';
 
 export default function AdminInputPage() {
@@ -25,8 +24,6 @@ export default function AdminInputPage() {
     // State untuk Anak & Pertumbuhan
     const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
     const [editingChild, setEditingChild] = useState<any>(null);
-
-    // State Baru: Menampilkan kalkulasi usia real-time (Poin Request)
     const [ageDisplay, setAgeDisplay] = useState<string>('');
 
     // Hooks
@@ -42,12 +39,11 @@ export default function AdminInputPage() {
         notes: ''
     });
 
-    // EFFECT: Menghitung usia otomatis saat tanggal lahir diisi
+    // Perhitungan usia otomatis saat input tanggal lahir
     useEffect(() => {
         if (childForm.birthDate) {
             const birthDate = new Date(childForm.birthDate);
             if (!isNaN(birthDate.getTime())) {
-                // Menggunakan logika pembulatan >= 15 hari = +1 bulan
                 const { label, totalMonths } = calculateDetailedAge(birthDate);
                 setAgeDisplay(`${label} (${totalMonths} bulan)`);
             }
@@ -56,23 +52,27 @@ export default function AdminInputPage() {
         }
     }, [childForm.birthDate]);
 
+    // FETCH PARENTS DENGAN FILTER BIDAN ID (SINKRONISASI MANAJEMEN AKUN)
     const fetchParents = async (searchQuery: string = '') => {
         if (!currentUser) return;
         setLoading(true);
         try {
             const usersRef = collection(db, 'users');
             let q;
-            if (currentUser.role === 'bidan' && currentUser.wilayah) {
+
+            if (currentUser.role === 'bidan') {
+                // BIDAN: Hanya bisa melihat Ibu yang ditugaskan kepadanya (berdasarkan bidanId)
                 q = query(
                     usersRef,
                     where('role', '==', 'parent'),
-                    where('wilayah', '==', currentUser.wilayah),
+                    where('bidanId', '==', currentUser.uid), // Filter krusial bgst
                     where('name', '>=', searchQuery),
                     where('name', '<=', searchQuery + '\uf8ff'),
                     orderBy('name'),
                     limit(20)
                 );
             } else {
+                // ADMIN PUSAT: Bisa melihat semua Ibu
                 q = query(
                     usersRef,
                     where('role', '==', 'parent'),
@@ -86,7 +86,8 @@ export default function AdminInputPage() {
             const snap = await getDocs(q);
             setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         } catch (err) {
-            console.error(err);
+            console.error("Gagal mengambil data orang tua:", err);
+            // Catatan: Jika error di console muncul "The query requires an index", klik link yang disediakan Firebase.
         } finally {
             setLoading(false);
         }
@@ -136,129 +137,144 @@ export default function AdminInputPage() {
         } catch (err) { alert('Gagal menyimpan riwayat gizi'); }
     };
 
+    // ----- VIEW: INPUT DETAIL ANAK -----
     if (view === 'input-anak') return (
-        <div className="space-y-6">
-            <button onClick={() => setView('list')} className="flex items-center gap-2 text-gray-600 hover:text-purple-600 font-medium transition-colors">
-                <FaArrowLeft /> Kembali ke Daftar Orang Tua
-            </button>
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+                <button onClick={() => setView('list')} className="flex items-center gap-2 text-gray-500 hover:text-pink-600 font-bold transition-colors text-sm uppercase tracking-wider">
+                    <FaArrowLeft /> Kembali ke Daftar
+                </button>
+                <div className="text-right">
+                    <p className="text-[10px] font-black text-gray-400 uppercase">Mengelola Pasien:</p>
+                    <p className="font-bold text-gray-800">{selectedUser?.name}</p>
+                </div>
+            </header>
 
             <div className="grid lg:grid-cols-2 gap-6">
+                {/* FORM PROFIL ANAK */}
                 <div className="space-y-4">
-                    <Card className={editingChild ? "border-amber-200 bg-amber-50" : "bg-blue-50 border-blue-100"}>
-                        <h3 className="font-bold mb-4 flex items-center gap-2 text-blue-700">
-                            <FaBaby /> {editingChild ? `Edit Profil: ${editingChild.name}` : 'Daftarkan Anak Baru'}
+                    <Card className={editingChild ? "border-amber-200 bg-amber-50/50 shadow-inner" : "bg-white border-gray-100 shadow-sm"}>
+                        <h3 className="font-black mb-6 flex items-center gap-2 text-gray-700 uppercase text-xs tracking-widest">
+                            <FaBaby className="text-pink-500" /> {editingChild ? `Update: ${editingChild.name}` : 'Registrasi Anak Baru'}
                         </h3>
                         <form onSubmit={handleSaveChildProfile} className="space-y-4">
                             <div>
                                 <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Nama Lengkap Anak</label>
-                                <input type="text" placeholder="Masukkan nama lengkap" value={childForm.name} onChange={e => setChildForm({ ...childForm, name: e.target.value })} className="w-full p-3 border rounded-xl bg-white outline-none focus:ring-2 focus:ring-blue-200 transition-all" required />
+                                <input type="text" placeholder="Nama sesuai akta" value={childForm.name} onChange={e => setChildForm({ ...childForm, name: e.target.value })} className="w-full p-3 border rounded-xl bg-white outline-none focus:ring-2 focus:ring-pink-200 transition-all text-sm font-semibold" required />
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Tanggal Lahir</label>
-                                    <input type="date" value={childForm.birthDate} onChange={e => setChildForm({ ...childForm, birthDate: e.target.value })} className="w-full p-3 border rounded-xl bg-white outline-none focus:ring-2 focus:ring-blue-200 transition-all" required />
+                                    <input type="date" value={childForm.birthDate} onChange={e => setChildForm({ ...childForm, birthDate: e.target.value })} className="w-full p-3 border rounded-xl bg-white outline-none focus:ring-2 focus:ring-pink-200 transition-all text-sm font-semibold" required />
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Jenis Kelamin</label>
-                                    <select value={childForm.gender} onChange={e => setChildForm({ ...childForm, gender: e.target.value })} className="w-full p-3 border rounded-xl bg-white outline-none">
+                                    <select value={childForm.gender} onChange={e => setChildForm({ ...childForm, gender: e.target.value })} className="w-full p-3 border rounded-xl bg-white outline-none text-sm font-semibold">
                                         <option value="male">Laki-laki</option>
                                         <option value="female">Perempuan</option>
                                     </select>
                                 </div>
                             </div>
 
-                            {/* TAMPILAN USIA OTOMATIS BERDASARKAN LOGIKA KLIEN */}
                             {ageDisplay && (
-                                <div className="p-3 bg-white border border-blue-200 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-1">
-                                    <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+                                <div className="p-3 bg-pink-50 border border-pink-100 rounded-xl flex items-center gap-3">
+                                    <div className="p-2 bg-white rounded-lg text-pink-500 shadow-sm">
                                         <FaCalculator size={14} />
                                     </div>
                                     <div>
-                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Usia Terkalkulasi (Pembulatan):</p>
-                                        <p className="text-sm font-black text-blue-700">{ageDisplay}</p>
+                                        <p className="text-[9px] font-bold text-pink-400 uppercase tracking-wider">Usia Saat Ini (Sistem):</p>
+                                        <p className="text-sm font-black text-pink-700">{ageDisplay}</p>
                                     </div>
                                 </div>
                             )}
 
-                            <Button type="submit" fullWidth variant={editingChild ? "secondary" : "primary"} className="py-3 shadow-md">
-                                {editingChild ? 'Update Profil' : 'Simpan Profil Anak'}
+                            <Button type="submit" fullWidth className="py-4 bg-gray-800 hover:bg-black text-white font-black rounded-2xl shadow-lg">
+                                {editingChild ? 'UPDATE DATA ANAK' : 'DAFTARKAN ANAK'}
                             </Button>
-                            {editingChild && <button type="button" onClick={() => { setEditingChild(null); setChildForm({ name: '', birthDate: '', gender: 'male' }); }} className="text-xs text-gray-500 w-full text-center hover:underline italic">Batal Edit</button>}
+                            {editingChild && (
+                                <button type="button" onClick={() => { setEditingChild(null); setChildForm({ name: '', birthDate: '', gender: 'male' }); }} className="text-[10px] text-gray-400 w-full text-center hover:text-red-500 font-bold uppercase tracking-widest">Batal Edit</button>
+                            )}
                         </form>
                     </Card>
 
                     <div className="space-y-2">
-                        <h4 className="font-bold text-gray-700 text-xs uppercase tracking-widest px-1">Daftar Anak {selectedUser.name}:</h4>
+                        <h4 className="font-black text-gray-400 text-[10px] uppercase tracking-[0.2em] px-1">Anak Terdaftar:</h4>
                         {children.map(child => (
                             <div key={child.id}
                                 onClick={() => { setSelectedChildId(child.id); setEditingChild(child); setChildForm({ name: child.name, birthDate: new Date(child.birthDate).toISOString().split('T')[0], gender: child.gender }); }}
-                                className={`p-4 border rounded-xl cursor-pointer transition ${selectedChildId === child.id ? 'border-purple-500 bg-purple-50 shadow-md scale-[1.02]' : 'bg-white hover:bg-gray-50'}`}>
-                                <div className="flex justify-between items-center">
-                                    <div>
-                                        <div className="font-bold text-gray-800">{child.name}</div>
-                                        <div className="text-[10px] text-gray-500 uppercase font-medium">{child.gender === 'male' ? 'Laki-laki' : 'Perempuan'}</div>
+                                className={`p-4 border-2 rounded-2xl cursor-pointer transition-all flex justify-between items-center ${selectedChildId === child.id ? 'border-pink-500 bg-pink-50 shadow-md' : 'bg-white border-gray-50 hover:border-pink-100'}`}>
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black ${selectedChildId === child.id ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-400'}`}>
+                                        {child.name.charAt(0).toUpperCase()}
                                     </div>
-                                    <FaHistory className={selectedChildId === child.id ? "text-purple-600" : "text-gray-300"} />
+                                    <div>
+                                        <div className="font-black text-gray-800 text-sm uppercase tracking-tight">{child.name}</div>
+                                        <div className="text-[9px] text-gray-400 uppercase font-bold tracking-widest">{child.gender === 'male' ? 'Laki-laki' : 'Perempuan'}</div>
+                                    </div>
                                 </div>
+                                <FaHistory className={selectedChildId === child.id ? "text-pink-500" : "text-gray-200"} />
                             </div>
                         ))}
                     </div>
                 </div>
 
+                {/* FORM INPUT PENGUKURAN */}
                 <div className="space-y-4">
                     {selectedChildId ? (
                         <>
-                            <Card className="border-purple-200 bg-purple-50/50">
-                                <h3 className="font-bold mb-4 flex items-center gap-2 text-purple-700">
-                                    <FaHistory /> Input Pengukuran Baru
+                            <Card className="border-emerald-100 bg-emerald-50/30">
+                                <h3 className="font-black mb-6 flex items-center gap-2 text-emerald-700 uppercase text-xs tracking-widest">
+                                    <FaHistory /> Input Hasil Penimbangan
                                 </h3>
-                                <form onSubmit={handleAddGrowth} className="space-y-4">
+                                <form onSubmit={handleAddGrowth} className="space-y-5">
                                     <div>
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1 text-center sm:text-left">Tanggal Pengukuran</label>
-                                        <div className="flex items-center gap-3 bg-white p-3 border rounded-xl focus-within:ring-2 focus-within:ring-purple-200 transition-all">
-                                            <FaCalendarAlt className="text-gray-400" />
-                                            <input type="date" value={growthForm.date} onChange={e => setGrowthForm({ ...growthForm, date: e.target.value })} className="w-full outline-none text-sm" required />
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Tanggal Kunjungan/Ukur</label>
+                                        <div className="flex items-center gap-3 bg-white p-3 border-2 border-emerald-100 rounded-xl focus-within:border-emerald-400 transition-all">
+                                            <FaCalendarAlt className="text-emerald-400" />
+                                            <input type="date" value={growthForm.date} onChange={e => setGrowthForm({ ...growthForm, date: e.target.value })} className="w-full outline-none text-sm font-bold bg-transparent" required />
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1 text-center sm:text-left">Berat Badan (kg)</label>
-                                            <div className="flex items-center gap-3 bg-white p-3 border rounded-xl focus-within:ring-2 focus-within:ring-purple-200 transition-all">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase ml-1">Berat (kg)</label>
+                                            <div className="flex items-center gap-3 bg-white p-4 border-2 border-emerald-100 rounded-2xl">
                                                 <FaWeight className="text-pink-400" />
-                                                <input type="number" step="0.1" placeholder="0.0" value={growthForm.weight} onChange={e => setGrowthForm({ ...growthForm, weight: e.target.value })} className="w-full outline-none text-sm font-bold" required />
+                                                <input type="number" step="0.1" placeholder="0.0" value={growthForm.weight} onChange={e => setGrowthForm({ ...growthForm, weight: e.target.value })} className="w-full outline-none text-lg font-black text-gray-800" required />
                                             </div>
                                         </div>
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1 text-center sm:text-left">Tinggi Badan (cm)</label>
-                                            <div className="flex items-center gap-3 bg-white p-3 border rounded-xl focus-within:ring-2 focus-within:ring-purple-200 transition-all">
+                                        <div className="space-y-1">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase ml-1">Tinggi (cm)</label>
+                                            <div className="flex items-center gap-3 bg-white p-4 border-2 border-emerald-100 rounded-2xl">
                                                 <FaRulerVertical className="text-blue-400" />
-                                                <input type="number" step="0.1" placeholder="0.0" value={growthForm.height} onChange={e => setGrowthForm({ ...growthForm, height: e.target.value })} className="w-full outline-none text-sm font-bold" required />
+                                                <input type="number" step="0.1" placeholder="0.0" value={growthForm.height} onChange={e => setGrowthForm({ ...growthForm, height: e.target.value })} className="w-full outline-none text-lg font-black text-gray-800" required />
                                             </div>
                                         </div>
                                     </div>
-                                    <textarea placeholder="Catatan kunjungan (contoh: Posyandu Melati)" value={growthForm.notes} onChange={e => setGrowthForm({ ...growthForm, notes: e.target.value })} className="w-full p-3 border rounded-xl bg-white outline-none focus:ring-2 focus:ring-purple-200 transition-all text-sm" rows={2} />
-                                    <Button type="submit" fullWidth disabled={loadingGrowth} className="py-3 bg-purple-600 hover:bg-purple-700 shadow-md">Simpan ke Riwayat Gizi</Button>
+                                    <textarea placeholder="Catatan tambahan (Posyandu, keluhan, dll)..." value={growthForm.notes} onChange={e => setGrowthForm({ ...growthForm, notes: e.target.value })} className="w-full p-4 border-2 border-emerald-100 rounded-2xl bg-white outline-none focus:border-emerald-400 transition-all text-sm font-medium" rows={2} />
+                                    <Button type="submit" fullWidth disabled={loadingGrowth} className="py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl shadow-lg">
+                                        SIMPAN DATA PERTUMBUHAN
+                                    </Button>
                                 </form>
                             </Card>
 
                             <div className="space-y-2">
-                                <h4 className="font-bold text-gray-700 text-xs uppercase tracking-widest px-1">Riwayat Pengukuran Terakhir:</h4>
+                                <h4 className="font-black text-gray-400 text-[10px] uppercase tracking-[0.2em] px-1">3 Riwayat Terakhir:</h4>
                                 {growthRecords.slice(0, 3).map(rec => (
-                                    <div key={rec.id} className="bg-white p-3 border rounded-xl flex justify-between items-center shadow-sm">
-                                        <div className="flex flex-col">
-                                            <span className="text-[10px] text-gray-400 font-bold uppercase">{new Date(rec.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                                            <span className="text-sm font-black text-purple-700">{rec.weight} kg | {rec.height} cm</span>
+                                    <div key={rec.id} className="bg-white p-4 border rounded-2xl flex justify-between items-center shadow-sm border-gray-100">
+                                        <div>
+                                            <p className="text-[10px] text-gray-400 font-bold uppercase">{new Date(rec.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                                            <p className="text-base font-black text-gray-800">{rec.weight} kg <span className="text-gray-300 font-normal mx-2">|</span> {rec.height} cm</p>
                                         </div>
-                                        <span className="text-[9px] bg-purple-50 text-purple-600 px-2 py-1 rounded-full font-bold border border-purple-100 uppercase">Tercatat</span>
+                                        <div className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[9px] font-black uppercase border border-emerald-100 italic">Valid</div>
                                     </div>
                                 ))}
                             </div>
                         </>
                     ) : (
-                        <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-gray-400 border-2 border-dashed rounded-3xl p-10 bg-gray-50/30">
-                            <FaHistory size={40} className="mb-4 opacity-10" />
-                            <p className="text-center text-sm italic font-medium">Pilih salah satu nama anak di kolom sebelah kiri untuk mulai menginput riwayat pertumbuhan (BB/TB).</p>
+                        <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-gray-300 border-4 border-dashed rounded-[3rem] p-10 bg-gray-50/50">
+                            <FaBaby size={60} className="mb-6 opacity-20 text-pink-400" />
+                            <p className="text-center text-sm italic font-bold uppercase tracking-widest max-w-xs">Pilih anak untuk mulai mencatat pertumbuhan bulanan.</p>
                         </div>
                     )}
                 </div>
@@ -266,39 +282,53 @@ export default function AdminInputPage() {
         </div>
     );
 
+    // ----- VIEW: LIST CARI ORANG TUA -----
     return (
-        <div className="space-y-6">
-            <div className="border-b border-gray-100 pb-4">
-                <h1 className="text-2xl font-bold text-gray-800">Pusat Input Data Pasien</h1>
-                <p className="text-sm text-gray-500">Daftarkan anak atau update perkembangan rutin sesuai wilayah {currentUser?.wilayah || 'Anda'}.</p>
-            </div>
+        <div className="space-y-8 animate-in fade-in duration-700 px-2">
+            <header className="border-b border-gray-100 pb-6">
+                <div className="flex items-center gap-2 mb-2">
+                    <span className="h-px w-8 bg-pink-500"></span>
+                    <span className="text-xs font-black uppercase tracking-[0.3em] text-pink-500">Input Data</span>
+                </div>
+                <h1 className="text-3xl font-black text-gray-800 italic font-serif tracking-tighter">Manajemen Pasien</h1>
+                <p className="text-gray-400 text-sm font-medium mt-1 uppercase tracking-tight">Wilayah Tugas: <span className="text-pink-600 font-bold">{currentUser?.wilayah || 'Nasional'}</span></p>
+            </header>
 
-            <Card className="bg-gradient-to-r from-white to-gray-50">
-                <form onSubmit={(e) => { e.preventDefault(); fetchParents(search); }} className="flex gap-2">
-                    <div className="flex-1 relative">
-                        <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" />
-                        <input type="text" placeholder="Masukkan nama orang tua untuk mencari..." className="w-full pl-11 pr-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-purple-200 transition-all" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Card className="p-2 rounded-[2rem] bg-gray-100/50 border-none shadow-inner">
+                <form onSubmit={(e) => { e.preventDefault(); fetchParents(search); }} className="flex gap-2 p-1">
+                    <div className="flex-1 relative group">
+                        <FaSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-pink-500 transition-colors" />
+                        <input type="text" placeholder="Cari nama orang tua..." className="w-full pl-14 pr-6 py-4 bg-white border-none rounded-[1.5rem] outline-none shadow-sm text-sm font-bold focus:ring-2 focus:ring-pink-200 transition-all" value={search} onChange={(e) => setSearch(e.target.value)} />
                     </div>
-                    <Button type="submit" disabled={loading} className="px-8 shadow-sm">
-                        {loading ? <FaSpinner className="animate-spin" /> : 'Cari'}
+                    <Button type="submit" disabled={loading} className="px-10 rounded-[1.5rem] bg-gray-800 hover:bg-black font-black uppercase tracking-widest shadow-md">
+                        {loading ? <FaSpinner className="animate-spin" /> : 'CARI'}
                     </Button>
                 </form>
             </Card>
 
-            <div className="grid gap-3">
-                {users.length === 0 && !loading && search && <p className="text-center py-10 text-gray-400 italic">Orang tua tidak ditemukan di wilayah ini.</p>}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {users.length === 0 && !loading && search && (
+                    <div className="col-span-full py-20 text-center">
+                        <FaUserCircle size={48} className="mx-auto text-gray-100 mb-4" />
+                        <p className="text-gray-400 italic font-bold uppercase text-xs tracking-widest">Pasien tidak ditemukan di wilayah Anda.</p>
+                    </div>
+                )}
                 {users.map(u => (
-                    <Card key={u.id} className="flex justify-between items-center hover:border-purple-300 hover:shadow-md transition-all group">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold group-hover:bg-purple-600 group-hover:text-white transition-colors">
-                                {u.name.charAt(0)}
+                    <Card key={u.id} className="p-6 rounded-[2rem] border-2 border-transparent hover:border-pink-500 hover:shadow-2xl transition-all cursor-pointer group bg-white">
+                        <div className="flex flex-col items-center text-center space-y-4">
+                            <div className="w-16 h-16 bg-pink-100 rounded-[1.5rem] flex items-center justify-center text-pink-600 font-black text-2xl group-hover:bg-pink-500 group-hover:text-white transition-all transform group-hover:rotate-6">
+                                {u.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                                <div className="font-bold text-gray-800">{u.name}</div>
-                                <div className="text-[10px] text-gray-400 font-medium uppercase tracking-tight">{u.phone} {u.wilayah ? `• Wilayah: ${u.wilayah}` : ''}</div>
+                                <h3 className="font-black text-gray-800 uppercase tracking-tight text-lg line-clamp-1">{u.name}</h3>
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{u.phone}</p>
+                            </div>
+                            <div className="pt-2 w-full">
+                                <Button onClick={() => { setSelectedUser(u); setView('input-anak'); }} variant="outline" fullWidth className="rounded-xl font-black text-[10px] py-3 uppercase tracking-[0.2em] border-2 group-hover:bg-pink-50 transition-all">
+                                    Kelola Anak
+                                </Button>
                             </div>
                         </div>
-                        <Button onClick={() => { setSelectedUser(u); setView('input-anak'); }} variant="outline" className="text-xs py-2 px-4">Kelola Anak</Button>
                     </Card>
                 ))}
             </div>
