@@ -6,7 +6,7 @@ export async function POST(request: Request) {
         const { phone, password, name, role, wilayah, bidanId } = await request.json();
 
         // Firebase Auth membutuhkan email, kita buat email dummy unik dari nomor HP
-        const email = `${phone}@gizianak.com`;
+        const email = `${phone}@gizianak.local`;
 
         // 1. Buat user di Firebase Auth (Admin SDK)
         const userRecord = await adminAuth.createUser({

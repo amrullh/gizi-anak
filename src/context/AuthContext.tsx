@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
      */
     const formatEmail = (phone: string) => {
         const cleanPhone = phone.replace(/\D/g, '');
-        return `${cleanPhone}@gizianak.com`;
+        return `${cleanPhone}@gizianak.local`;
     };
 
     useEffect(() => {
@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return unsubscribe;
     }, []);
 
-    // LOGIN: Sekarang otomatis pakai @gizianak.com
+    
     const login = async (phone: string, password: string) => {
         const email = formatEmail(phone);
         await signInWithEmailAndPassword(auth, email, password);
