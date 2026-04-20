@@ -89,7 +89,7 @@ export default function AdminPregnancyPage() {
     }
   }, [form.hpht]);
 
-  // Fetch list of pregnant mothers under this bidan (or all for admin)
+  // Fetch list of pregnant mothers under this bidan or admin_puskesmas or global admin
   const fetchPregnantList = async () => {
     if (!currentUser) return;
     setLoading(true);
@@ -99,6 +99,12 @@ export default function AdminPregnancyPage() {
         q = query(
           collection(db, 'pregnancies'),
           where('bidanId', '==', currentUser.uid),
+          orderBy('updatedAt', 'desc')
+        );
+      } else if (currentUser.role === 'admin_puskesmas') {
+        q = query(
+          collection(db, 'pregnancies'),
+          where('wilayah', '==', currentUser.wilayah),
           orderBy('updatedAt', 'desc')
         );
       } else {
@@ -115,7 +121,7 @@ export default function AdminPregnancyPage() {
 
   useEffect(() => { fetchPregnantList(); }, [currentUser]);
 
-  // Search for new parents (only those assigned to this bidan)
+  // Search for new parents (only those assigned to this bidan or same wilayah for admin_puskesmas)
   useEffect(() => {
     if (search.trim() === '') {
       setUsers([]);
@@ -132,6 +138,12 @@ export default function AdminPregnancyPage() {
             collection(db, 'users'),
             where('role', '==', 'parent'),
             where('bidanId', '==', currentUser.uid)
+          );
+        } else if (currentUser.role === 'admin_puskesmas') {
+          q = query(
+            collection(db, 'users'),
+            where('role', '==', 'parent'),
+            where('wilayah', '==', currentUser.wilayah)
           );
         } else {
           q = query(collection(db, 'users'), where('role', '==', 'parent'), limit(100));
