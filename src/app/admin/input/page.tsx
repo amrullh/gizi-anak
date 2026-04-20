@@ -52,7 +52,7 @@ export default function AdminInputPage() {
         }
     }, [childForm.birthDate]);
 
-    // FETCH PARENTS DENGAN FILTER BIDAN ID (SINKRONISASI MANAJEMEN AKUN)
+    // FETCH PARENTS DENGAN FILTER ROLE (REVISI LOGIC SORTING)
     const fetchParents = async (searchQuery: string = '') => {
         if (!currentUser) return;
         setLoading(true);
@@ -60,19 +60,32 @@ export default function AdminInputPage() {
             const usersRef = collection(db, 'users');
             let q;
 
-            if (currentUser.role === 'bidan') {
-                // BIDAN: Hanya bisa melihat Ibu yang ditugaskan kepadanya (berdasarkan bidanId)
+            const currentRole = (currentUser.role as unknown as string);
+
+            if (currentRole === 'bidan') {
+                // BIDAN: Hanya bisa melihat Ibu yang ditugaskan kepadanya
                 q = query(
                     usersRef,
                     where('role', '==', 'parent'),
-                    where('bidanId', '==', currentUser.uid), // Filter krusial bgst
+                    where('bidanId', '==', currentUser.uid),
+                    where('name', '>=', searchQuery),
+                    where('name', '<=', searchQuery + '\uf8ff'),
+                    orderBy('name'),
+                    limit(20)
+                );
+            } else if (currentRole === 'admin_puskesmas') {
+                // ADMIN PUSKESMAS: Filter berdasarkan kesamaan Wilayah
+                q = query(
+                    usersRef,
+                    where('role', '==', 'parent'),
+                    where('wilayah', '==', currentUser.wilayah),
                     where('name', '>=', searchQuery),
                     where('name', '<=', searchQuery + '\uf8ff'),
                     orderBy('name'),
                     limit(20)
                 );
             } else {
-                // ADMIN PUSAT: Bisa melihat semua Ibu
+                // ADMIN PUSAT: Bisa melihat semua Ibu (Tanpa filter wilayah)
                 q = query(
                     usersRef,
                     where('role', '==', 'parent'),
@@ -87,7 +100,6 @@ export default function AdminInputPage() {
             setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         } catch (err) {
             console.error("Gagal mengambil data orang tua:", err);
-            // Catatan: Jika error di console muncul "The query requires an index", klik link yang disediakan Firebase.
         } finally {
             setLoading(false);
         }
