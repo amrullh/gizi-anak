@@ -6,17 +6,19 @@ import {
     onAuthStateChanged,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
-    signOut
+    signOut,
+    getIdToken
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
 
-// Interface User disesuaikan dengan kebutuhan data Puskesmas & Role Bidan
+// 1. REVISI INTERFACE: Gunakan string untuk role agar fleksibel dan tidak menyebabkan error 'no overlap'
 interface User {
     uid: string;
     email: string | null;
     name?: string;
-    role?: 'parent' | 'admin' | 'bidan';
+    // Menggunakan string agar TypeScript tidak protes saat membandingkan role baru
+    role?: 'parent' | 'admin' | 'bidan' | 'admin_puskesmas' | string;
     phone?: string;
     address?: string;
     ttl?: string;
@@ -26,7 +28,7 @@ interface User {
     age?: number;
     lila?: number;
     isPregnant?: boolean;
-    wilayah?: string;
+    wilayah?: string; // Menyimpan lokasi/nama Puskesmas
     bidanId?: string;
 }
 
@@ -46,11 +48,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
-    /**
-     * FIX: Helper untuk format email
-     * 1. Menghapus semua karakter non-angka (spasi, strip, dll)
-     * 2. Menggunakan domain .com agar SINKRON dengan database Firebase kamu
-     */
     const formatEmail = (phone: string) => {
         const cleanPhone = phone.replace(/\D/g, '');
         return `${cleanPhone}@gizianak.local`;
@@ -63,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
                     if (userDoc.exists()) {
                         const userData = userDoc.data();
+                        // Memaksa data Firestore masuk ke interface User
                         setUser({
                             uid: firebaseUser.uid,
                             email: firebaseUser.email,
@@ -73,8 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                             uid: firebaseUser.uid,
                             email: firebaseUser.email,
                             name: firebaseUser.displayName || '',
-                            role: undefined,
-                        });
+                        } as User);
                     }
                 } catch (error) {
                     console.error('Error fetching user data:', error);
@@ -88,7 +85,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return unsubscribe;
     }, []);
 
-    
     const login = async (phone: string, password: string) => {
         const email = formatEmail(phone);
         await signInWithEmailAndPassword(auth, email, password);
@@ -101,6 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
         await setDoc(doc(db, 'users', userCredential.user.uid), {
+            uid: userCredential.user.uid,
             name,
             phone: cleanPhone,
             email,
@@ -111,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
     };
 
-    // REGISTER BY ADMIN (Lewat API Route)
+    // REGISTER BY ADMIN: Terkoneksi dengan API Route dan Token Keamanan
     const registerByAdmin = async (
         phone: string,
         password: string,
@@ -122,12 +119,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ): Promise<string> => {
         const cleanPhone = phone.replace(/\D/g, '');
 
-        // Kirim data ke API Admin SDK kita
+        // Ambil token user login (Admin/Bidan) untuk dikirim ke backend
+        const currentUser = auth.currentUser;
+        if (!currentUser) throw new Error("Sesi tidak valid, silakan login ulang.");
+
+        const token = await getIdToken(currentUser);
+
         const response = await fetch('/api/admin/create-user', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
             body: JSON.stringify({
-                phone: cleanPhone, // Kirim nomor bersih saja
+                phone: cleanPhone,
                 password,
                 name,
                 role,

@@ -25,20 +25,32 @@ export function useAdminData() {
 
             setLoading(true);
             try {
-                const isBidan = user.role === 'bidan';
+                // Casting role agar aman dari error TypeScript
+                const currentRole = (user.role as unknown as string);
+                const userWilayah = user.wilayah;
 
-                // 1. QUERY PARENTS (Isolasi Data)
+                // 1. QUERY PARENTS (Pagar Gaib Data)
                 let parentsBaseQuery;
-                if (isBidan) {
+
+                if (currentRole === 'admin') {
+                    // Admin Global: Ambil semua orang tua tanpa filter wilayah
+                    parentsBaseQuery = query(
+                        collection(db, 'users'),
+                        where('role', '==', 'parent')
+                    );
+                } else if (currentRole === 'admin_puskesmas') {
+                    // Admin Puskesmas: Filter berdasarkan wilayah Puskesmasnya
+                    parentsBaseQuery = query(
+                        collection(db, 'users'),
+                        where('role', '==', 'parent'),
+                        where('wilayah', '==', userWilayah)
+                    );
+                } else {
+                    // Bidan: Filter berdasarkan UID bidan penanggung jawab
                     parentsBaseQuery = query(
                         collection(db, 'users'),
                         where('role', '==', 'parent'),
                         where('bidanId', '==', user.uid)
-                    );
-                } else {
-                    parentsBaseQuery = query(
-                        collection(db, 'users'),
-                        where('role', '==', 'parent')
                     );
                 }
 
@@ -55,15 +67,17 @@ export function useAdminData() {
                     });
                 });
 
-                // 2. QUERY CHILDREN
+                // 2. QUERY CHILDREN (Hanya yang ortunya masuk filter di atas)
                 let childrenSnapDocs: any[] = [];
                 if (validParentIds.length > 0) {
+                    // Firebase punya limit 'in' maksimal 10-30 ID, 
+                    // Jika data sangat besar, kedepannya perlu query berdasarkan field 'wilayah' langsung di tabel children
                     const qChild = query(collection(db, 'children'), where('userId', 'in', validParentIds));
                     const snap = await getDocs(qChild);
                     childrenSnapDocs = snap.docs;
                 }
 
-                // 3. FETCH GLOBAL DATA
+                // 3. FETCH GLOBAL DATA (Articles tetap global, Records difilter di memori nanti)
                 const [articlesSnap, recordsSnap] = await Promise.all([
                     getDocs(collection(db, 'articles')),
                     getDocs(collection(db, 'growthRecords'))
@@ -83,7 +97,7 @@ export function useAdminData() {
                     }
                 });
 
-                // 4. DATA ENHANCEMENT
+                // 4. DATA ENHANCEMENT & FILTERING
                 let goodCount = 0;
                 const alertList: any[] = [];
 
@@ -103,7 +117,6 @@ export function useAdminData() {
                     const weightVal = latest?.weight || 0;
                     const heightVal = latest?.height || 0;
 
-                    // FIX: Tambahkan argumen ke-5 (baring/berdiri)
                     const result = calculateNutritionalStatus(
                         ageData.totalMonths,
                         child.gender as 'male' | 'female',
@@ -112,15 +125,12 @@ export function useAdminData() {
                         ageData.totalMonths < 24 ? 'baring' : 'berdiri'
                     );
 
-                    // Pengecekan status menggunakan flag yang baru kita buat di utils
                     const isStunted = result.isStunted;
                     const isGoodNutrition = weightVal > 0 && result.weightStatus.color === 'green' && !isStunted;
 
-                    if (isGoodNutrition) {
-                        goodCount++;
-                    }
+                    if (isGoodNutrition) goodCount++;
 
-                    // Alert jika ada masalah (Gizi Kurang/Buruk ATAU Stunting)
+                    // Alert Filter: Hanya munculkan alert untuk anak yang wilayahnya sesuai akses user
                     if (weightVal > 0 && (result.weightStatus.color !== 'green' || isStunted)) {
                         alertList.push({
                             id: child.id,

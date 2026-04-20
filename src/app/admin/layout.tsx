@@ -11,13 +11,13 @@ import {
     FaBars,
     FaTimes,
     FaBell,
-    FaCog,
+    FaSignOutAlt, // Icon Logout
     FaPlus,
     FaVenusMars,
     FaUsers,
     FaSeedling,
     FaHeartbeat,
-    FaMapMarkerAlt // Icon untuk Kelola Wilayah
+    FaMapMarkerAlt
 } from 'react-icons/fa'
 import { useAuth } from '@/context/AuthContext'
 import { motion } from 'framer-motion'
@@ -26,14 +26,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const pathname = usePathname()
     const router = useRouter()
-    const { user, loading } = useAuth()
+    const { user, loading, logout } = useAuth()
+
+    // Teknik casting agar TypeScript tidak rewel saat pengecekan role
+    const currentRole = (user?.role as unknown as string);
 
     useEffect(() => {
-        // REVISI: Izinkan role 'admin' DAN 'bidan' untuk mengakses layout ini
-        if (!loading && (!user || (user.role !== 'admin' && user.role !== 'bidan'))) {
+        // Izinkan 'admin', 'admin_puskesmas', dan 'bidan' untuk masuk ke Layout Admin
+        const allowedRoles = ['admin', 'admin_puskesmas', 'bidan'];
+        if (!loading && (!user || !allowedRoles.includes(currentRole))) {
             router.push('/login')
         }
-    }, [user, loading, router])
+    }, [user, loading, router, currentRole])
+
+    const handleLogout = async () => {
+        try {
+            await logout()
+            router.push('/login')
+        } catch (error) {
+            console.error("Gagal logout:", error)
+        }
+    }
 
     // Floating icons dekoratif
     const floatingIcons = [
@@ -58,26 +71,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         )
     }
 
-    // REVISI: Pastikan pengecekan role sinkron dengan useEffect
-    if (!user || (user.role !== 'admin' && user.role !== 'bidan')) {
+    if (!user || !['admin', 'admin_puskesmas', 'bidan'].includes(currentRole)) {
         return null
     }
 
+    // DINAMIS NAV ITEMS
     const navItems = [
         { href: '/admin/dashboard', icon: FaHome, label: 'Dashboard' },
-
-        // Fitur yang bisa diakses Admin & Bidan (Urutan: Artikel - Monitoring - Input - Ibu Hamil)
         { href: '/admin/articles', icon: FaNewspaper, label: 'Kelola Artikel' },
         { href: '/admin/monitoring', icon: FaEye, label: 'Monitoring' },
         { href: '/admin/input', icon: FaPlus, label: 'Data Anak' },
         { href: '/admin/pregnancy', icon: FaVenusMars, label: 'Data Ibu Hamil' },
+        { href: '/admin/users', icon: FaUsers, label: 'Manajemen User' },
 
-        // Fitur khusus Admin (Puskesmas Pusat) (Urutan: Kelola Wilayah - Manajemen User - Laporan)
-        ...(user.role === 'admin' ? [
-            { href: '/admin/users', icon: FaUsers, label: 'Manajemen User' },
+        ...(currentRole === 'admin' ? [
             { href: '/admin/regions', icon: FaMapMarkerAlt, label: 'Kelola Wilayah' },
+            { href: '/admin/reports', icon: FaChartBar, label: 'Laporan Global' },
+        ] : []),
 
-            { href: '/admin/reports', icon: FaChartBar, label: 'Laporan' },
+        ...(currentRole === 'admin_puskesmas' ? [
+            { href: '/admin/reports', icon: FaChartBar, label: 'Laporan Wilayah' },
         ] : []),
     ];
 
@@ -85,42 +98,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     return (
         <div className="relative min-h-screen bg-gradient-to-br from-pink-50 via-white to-blue-50 flex flex-col overflow-x-hidden">
-            {/* Floating medical icons background */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
                 {floatingIcons.map((item, i) => (
                     <motion.div
                         key={i}
-                        className="absolute text-2xl md:text-3xl opacity-20"
+                        className="absolute text-2xl opacity-20"
                         style={{ left: item.left, top: item.top }}
-                        animate={{
-                            y: [0, -20, 0],
-                            x: [0, 10, 0],
-                            rotate: [0, 10, -10, 0],
-                        }}
-                        transition={{
-                            duration: item.duration,
-                            delay: item.delay,
-                            repeat: Infinity,
-                            ease: "easeInOut"
-                        }}
+                        animate={{ y: [0, -20, 0], x: [0, 10, 0], rotate: [0, 10, -10, 0] }}
+                        transition={{ duration: item.duration, delay: item.delay, repeat: Infinity, ease: "easeInOut" }}
                     >
                         {item.icon}
                     </motion.div>
                 ))}
             </div>
 
-            {/* Subtle gradient orbs */}
-            <div className="fixed top-0 left-0 w-96 h-96 bg-pink-200 rounded-full blur-3xl opacity-20 pointer-events-none" />
-            <div className="fixed bottom-0 right-0 w-96 h-96 bg-blue-200 rounded-full blur-3xl opacity-20 pointer-events-none" />
-
-            {/* MOBILE HEADER */}
             <header className="lg:hidden bg-white/80 backdrop-blur-sm border-b border-pink-100 sticky top-0 z-40">
                 <div className="flex justify-between items-center px-4 py-3">
-                    <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 rounded-full hover:bg-pink-100 transition text-pink-700">
+                    <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 text-pink-700">
                         {sidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
                     </button>
                     <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center text-white shadow-sm">
+                        <div className="w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center text-white">
                             <FaSeedling size={14} />
                         </div>
                         <span className="font-serif italic font-bold text-pink-700">Puskesmas</span>
@@ -132,12 +130,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </header>
 
             <div className="flex flex-1 relative z-10">
-                {/* SIDEBAR OVERLAY */}
                 {sidebarOpen && (
                     <div className="fixed inset-0 bg-pink-900/20 backdrop-blur-sm lg:hidden z-50" onClick={() => setSidebarOpen(false)} />
                 )}
 
-                {/* SIDEBAR */}
                 <aside className={`
                     fixed lg:sticky top-0 left-0 z-50 w-72 h-screen bg-white/90 backdrop-blur-md border-r border-pink-100
                     transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
@@ -145,13 +141,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 `}>
                     <div className="p-8 border-b border-pink-100 lg:block hidden">
                         <div className="flex items-center gap-3 mb-2">
-                            <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl flex items-center justify-center text-white rotate-3 shadow-md shadow-pink-200">
+                            <div className="w-10 h-10 bg-pink-500 rounded-2xl flex items-center justify-center text-white shadow-md">
                                 <FaSeedling size={18} />
                             </div>
-                            <h2 className="text-2xl font-serif italic font-black text-gray-800 tracking-tight">Puskesmas</h2>
+                            <h2 className="text-2xl font-serif italic font-black text-gray-800">Puskesmas</h2>
                         </div>
                         <p className="text-[10px] uppercase tracking-[0.3em] text-pink-500 font-bold ml-1">
-                            {user.role === 'admin' ? 'Admin Portal' : `Bidan ${user.wilayah || ''}`}
+                            {currentRole === 'admin' ? 'Admin Portal' :
+                                currentRole === 'admin_puskesmas' ? `Puskesmas ${user.wilayah || ''}` :
+                                    `Bidan ${user.wilayah || ''}`}
                         </p>
                     </div>
 
@@ -163,30 +161,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                     key={item.href}
                                     href={item.href}
                                     onClick={() => setSidebarOpen(false)}
-                                    className={`
-                                        flex items-center gap-4 px-5 py-4 rounded-full transition-all duration-300 group
-                                        ${isActive
-                                            ? 'bg-pink-500 text-white shadow-lg shadow-pink-200 scale-[1.02]'
-                                            : 'text-gray-600 hover:bg-pink-500 hover:text-white hover:shadow-md hover:shadow-pink-200'
-                                        }
-                                    `}
+                                    className={`flex items-center gap-4 px-5 py-4 rounded-full transition-all duration-300 ${isActive ? 'bg-pink-500 text-white shadow-lg' : 'text-gray-600 hover:bg-pink-500 hover:text-white'
+                                        }`}
                                 >
-                                    <item.icon size={20} className={`${isActive ? 'text-white' : 'group-hover:text-white group-hover:scale-110'} transition-all`} />
-                                    <span className="text-sm font-bold tracking-tight">{item.label}</span>
+                                    <item.icon size={20} />
+                                    <span className="text-sm font-bold">{item.label}</span>
                                 </Link>
                             )
                         })}
                     </nav>
 
+                    {/* REVISI: Tombol Logout menggantikan Pengaturan */}
                     <div className="p-5 border-t border-pink-100">
-                        <Link href="/admin/settings" className="flex items-center gap-4 px-5 py-4 rounded-full text-gray-600 hover:bg-pink-500 hover:text-white transition-all text-sm font-bold group">
-                            <FaCog size={20} className="group-hover:rotate-90 transition-transform duration-500" />
-                            <span>Pengaturan</span>
-                        </Link>
+                        <button
+                            onClick={handleLogout}
+                            className="w-full flex items-center gap-4 px-5 py-4 rounded-full text-red-500 hover:bg-red-50 transition-all text-sm font-bold group"
+                        >
+                            <FaSignOutAlt size={20} className="group-hover:-translate-x-1 transition-transform" />
+                            <span>Keluar Akun</span>
+                        </button>
                     </div>
                 </aside>
 
-                {/* MAIN CONTENT AREA */}
                 <div className="flex-1 flex flex-col min-w-0">
                     <header className="hidden lg:block bg-white/70 backdrop-blur-md border-b border-pink-100 sticky top-0 z-40">
                         <div className="h-20 flex justify-between items-center px-10">
@@ -195,25 +191,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 <div>
                                     <h1 className="font-serif italic font-black text-gray-800 text-xl">GiziAnak</h1>
                                     <p className="text-[10px] text-pink-500 font-black uppercase tracking-[0.2em]">
-                                        {user.role === 'admin' ? 'Dashboard Utama' : `Wilayah: ${user.wilayah || '-'}`}
+                                        {currentRole === 'admin' ? 'Dashboard Utama' : `Wilayah: ${user.wilayah || '-'}`}
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-8">
-                                <button className="relative p-2 text-pink-400 hover:text-pink-600 transition-colors">
-                                    <FaBell size={22} />
-                                    <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-pink-500 rounded-full border-2 border-white"></span>
-                                </button>
-
-                                <div className="flex items-center gap-5 pl-8 border-l border-pink-100">
-                                    <div className="text-right">
-                                        <div className="font-black text-gray-800 text-sm leading-none mb-1">{user.name || 'User'}</div>
-                                        <div className="text-[11px] text-pink-500 font-bold capitalize">{user.role}</div>
-                                    </div>
-                                    <div className="w-12 h-12 bg-pink-500 text-white rounded-2xl flex items-center justify-center text-sm font-black shadow-md shadow-pink-200 border-2 border-white hover:scale-105 transition-transform cursor-pointer">
-                                        {initial}
-                                    </div>
+                            <div className="flex items-center gap-5">
+                                <div className="text-right">
+                                    <div className="font-black text-gray-800 text-sm leading-none mb-1">{user.name}</div>
+                                    <div className="text-[11px] text-pink-500 font-bold capitalize">{currentRole.replace('_', ' ')}</div>
+                                </div>
+                                <div className="w-12 h-12 bg-pink-500 text-white rounded-2xl flex items-center justify-center text-sm font-black shadow-md border-2 border-white">
+                                    {initial}
                                 </div>
                             </div>
                         </div>
