@@ -47,10 +47,23 @@ export default function MonitoringPage() {
 
     const filteredData = useMemo(() => {
         return children.filter(child => {
-            const isBidan = user?.role === 'bidan';
-            const matchesBidan = !isBidan || child.bidanId === user?.uid;
-            if (!matchesBidan) return false;
+            // --- LOGIKA SORTIR BERDASARKAN ROLE (REVISI) ---
+            const role = user?.role as any;
 
+            if (role === 'admin') {
+                // Admin Global: Lolos semua data
+            } else if (role === 'admin_puskesmas') {
+                // Admin Puskesmas: Filter berdasarkan kesamaan wilayah
+                if (child.wilayah !== user?.wilayah) return false;
+            } else if (role === 'bidan') {
+                // Bidan: Filter berdasarkan UID bidan yang menangani
+                if (child.bidanId !== user?.uid) return false;
+            } else {
+                // Keamanan tambahan: Jika role tidak dikenal, sembunyikan data
+                return false;
+            }
+
+            // --- SISANYA LOGIKA ASLI (TIDAK DIUBAH) ---
             const birthDate = convertTimestampToDate(child.birthDate);
             const ageData = calculateDetailedAge(birthDate);
 
@@ -86,7 +99,7 @@ export default function MonitoringPage() {
                 <div>
                     <h1 className="text-2xl font-serif italic font-semibold text-gray-800">Monitoring Gizi (Permenkes 2020)</h1>
                     <p className="text-gray-400 text-sm">
-                        {user?.role === 'bidan' ? `Wilayah Kerja: ${user?.wilayah}` : 'Data Antropometri Nasional'}
+                        {(user?.role as any) === 'admin' ? 'Data Antropometri Nasional (Global)' : `Wilayah Kerja: ${user?.wilayah || '-'}`}
                     </p>
                 </div>
             </div>
@@ -196,11 +209,9 @@ function DetailModal({ child, onClose }: { child: MonitoringChild; onClose: () =
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            {/* Area Luar untuk Close */}
             <div className="absolute inset-0" onClick={onClose} />
 
             <Card className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl relative p-0 overflow-hidden flex flex-col max-h-[90vh]">
-                {/* TOMBOL CLOSE (FIXED) */}
                 <button
                     onClick={onClose}
                     className="absolute right-6 top-6 z-[70] p-2 bg-white/90 backdrop-blur shadow-md rounded-full text-gray-500 hover:bg-red-50 hover:text-red-500 transition-all border border-gray-100"
@@ -208,9 +219,7 @@ function DetailModal({ child, onClose }: { child: MonitoringChild; onClose: () =
                     <FaTimes size={20} />
                 </button>
 
-                {/* Wrapper Scrollable */}
                 <div className="overflow-y-auto flex-1">
-                    {/* Header */}
                     <div className="p-8 bg-gradient-to-br from-pink-50 to-white border-b sticky top-0 z-10 backdrop-blur-md">
                         <div className="flex items-center gap-6">
                             <div className="w-20 h-20 bg-white rounded-2xl shadow-sm flex items-center justify-center text-pink-500 border border-pink-100">
@@ -224,9 +233,7 @@ function DetailModal({ child, onClose }: { child: MonitoringChild; onClose: () =
                         </div>
                     </div>
 
-                    {/* Content Detail */}
                     <div className="p-8 space-y-8">
-                        {/* Nilai Z-Score */}
                         <div className="grid md:grid-cols-4 gap-6">
                             <div className="md:col-span-1 space-y-4">
                                 <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
@@ -249,7 +256,6 @@ function DetailModal({ child, onClose }: { child: MonitoringChild; onClose: () =
                                 ))}
                             </div>
 
-                            {/* Grafik Pertumbuhan */}
                             <div className="md:col-span-3 space-y-4">
                                 <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                                     <FaChartLine /> Tren Pertumbuhan (BB & TB)
@@ -266,7 +272,6 @@ function DetailModal({ child, onClose }: { child: MonitoringChild; onClose: () =
                             </div>
                         </div>
 
-                        {/* Grafik Z-Score Sebaran */}
                         <div className="space-y-4 pt-4 border-t">
                             <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                                 <FaWaveSquare /> Sebaran Z-Score (Kondisi Saat Ini)
@@ -280,7 +285,6 @@ function DetailModal({ child, onClose }: { child: MonitoringChild; onClose: () =
                             </div>
                         </div>
 
-                        {/* Riwayat Pengukuran */}
                         <div className="pt-4 border-t">
                             <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                                 <FaHeartbeat /> Riwayat Pengukuran Terakhir
