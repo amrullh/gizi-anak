@@ -1,28 +1,22 @@
 "use client";
 
 import Link from 'next/link'
+import 'leaflet/dist/leaflet.css';
 import Button from '@/components/ui/Button'
 import { useEffect, useRef, useState } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { usePublishedArticles } from '@/hooks/usePublishedArticles'
 import Card from '@/components/ui/Card'
+import Image from 'next/image'
 
 export default function Home() {
   const { articles, loading } = usePublishedArticles();
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [statsVisible, setStatsVisible] = useState(false);
   const statsRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll();
-  const y1 = useTransform(scrollY, [0, 300], [0, 100]);
-  const y2 = useTransform(scrollY, [0, 300], [0, -50]);
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+  const y1 = useTransform(scrollY, [0, 500], [0, 150]);
+  const y2 = useTransform(scrollY, [0, 500], [0, -100]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -37,135 +31,130 @@ export default function Home() {
     return () => observer.disconnect();
   }, []);
 
-  const floatingIcons = [
-    { icon: '❤️', left: '5%', top: '15%', delay: 0, duration: 6 },
-    { icon: '🩺', left: '85%', top: '25%', delay: 2, duration: 7 },
-    { icon: '👶', left: '10%', top: '70%', delay: 1, duration: 8 },
-    { icon: '🌡️', left: '75%', top: '80%', delay: 3, duration: 5 },
-    { icon: '💊', left: '45%', top: '40%', delay: 4, duration: 9 },
-    { icon: '🫀', left: '60%', top: '55%', delay: 0.5, duration: 7 },
-  ];
-
   return (
-    <div className="relative min-h-screen bg-white text-gray-900 overflow-x-hidden">
-      {/* Decorative medical pattern background */}
-      <div className="fixed inset-0 opacity-[0.02] pointer-events-none"
+    <div className="relative min-h-screen bg-[#FDFCF0] text-gray-900 overflow-x-hidden font-sans">
+      {/* Background Pattern */}
+      <div className="fixed inset-0 opacity-[0.04] pointer-events-none"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5 L35 20 L50 20 L38 30 L43 45 L30 35 L17 45 L22 30 L10 20 L25 20 Z' fill='%23f472b6' /%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 5 Q25 15 20 25 Q15 15 20 5' fill='%2322c55e' /%3E%3C/svg%3E")`,
           backgroundRepeat: 'repeat'
         }}
       />
 
-      {/* Floating medical icons */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        {floatingIcons.map((item, i) => (
-          <motion.div
-            key={i}
-            className="absolute text-2xl md:text-4xl opacity-20"
-            style={{ left: item.left, top: item.top }}
-            animate={{
-              y: [0, -20, 0],
-              x: [0, 10, 0],
-              rotate: [0, 10, -10, 0],
-            }}
-            transition={{
-              duration: item.duration,
-              delay: item.delay,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          >
-            {item.icon}
-          </motion.div>
-        ))}
-      </div>
+      <motion.div style={{ y: y1 }} className="absolute top-20 -right-20 w-96 h-96 bg-green-200 rounded-full blur-[100px] opacity-30 pointer-events-none" />
+      <motion.div style={{ y: y2 }} className="absolute top-1/2 -left-20 w-80 h-80 bg-pink-200 rounded-full blur-[100px] opacity-30 pointer-events-none" />
 
-      <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
+      {/* Navbar */}
+      <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white/70 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="relative w-8 h-8">
-              <div className="absolute inset-0 bg-pink-500 rounded-full group-hover:scale-110 transition-transform"></div>
-              <div className="absolute inset-0.5 bg-white rounded-full flex items-center justify-center">
-                <span className="text-pink-500 font-bold">G</span>
-              </div>
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="relative w-10 h-10 overflow-hidden rounded-xl shadow-sm group-hover:rotate-6 transition-transform">
+              <Image src="/icons/icon.png" alt="Logo" fill className="object-cover" />
             </div>
-            <span className="text-xl font-semibold text-gray-800">GiziAnak</span>
+            <span className="text-2xl font-bold tracking-tight text-green-800">MONIKEL</span>
           </Link>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/login"
-              className="bg-pink-500 text-white px-6 py-2 rounded-full hover:bg-pink-600 transition-colors shadow-sm hover:shadow-md"
-            >
-              Login
-            </Link>
-          </div>
+          <Link href="/login" className="bg-green-600 text-white px-7 py-2.5 rounded-full font-medium hover:bg-green-700 transition-all shadow-md">
+            Login
+          </Link>
         </div>
       </nav>
 
-      <main className="relative max-w-7xl mx-auto px-6 py-12 md:py-20">
-        {/* Hero section */}
-        <div className="mb-20 relative text-center md:text-left">
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-5xl md:text-7xl font-bold tracking-tight mb-4"
-          >
-            Monitoring <br />
-            <span className="text-pink-500 relative">
-              MOP
-              <svg className="absolute -bottom-3 left-0 w-full" height="10" viewBox="0 0 200 10">
-                <path d="M0,5 Q25,0 50,5 T100,5 T150,5 T200,5" stroke="#f472b6" strokeWidth="2" fill="none" strokeDasharray="5 5">
-                  <animate attributeName="stroke-dashoffset" from="0" to="20" dur="1s" repeatCount="indefinite" />
-                </path>
-              </svg>
-            </span>
-          </motion.h1>
-          <p className="text-xl text-gray-600 max-w-2xl mb-8 mx-auto md:mx-0">
-            Aplikasi monitoring gizi anak terintegrasi dengan tenaga kesehatan untuk memastikan tumbuh kembang optimal.
-          </p>
+      <main className="relative max-w-7xl mx-auto px-6 py-12 md:py-24">
+
+        {/* Hero Section */}
+        <div className="grid lg:grid-cols-2 gap-16 items-center mb-32">
           <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="inline-block"
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
           >
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-700 text-sm font-semibold mb-6">
+              <span className="animate-bounce">🍃</span> Pemanfaatan Superfood Kelor
+            </div>
+            <h1 className="text-5xl md:text-7xl font-extrabold leading-tight mb-6 text-gray-800">
+              Cegah Stunting dengan <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-pink-500">
+                Kekuatan Kelor
+              </span>
+            </h1>
+            <p className="text-xl text-gray-600 mb-10 leading-relaxed">
+              <strong>MONIKEL</strong> membantu ibu memantau tumbuh kembang bayi secara akurat dan memberikan edukasi nutrisi berbasis tanaman Kelor.
+            </p>
             <Link href="/login">
-              <Button className="bg-pink-500 hover:bg-pink-600 text-white px-8 py-3 text-lg rounded-full shadow-md transition-all hover:shadow-xl">
-                MASUK SEKARANG
+              <Button className="bg-green-600 hover:bg-green-700 text-white px-10 py-4 text-lg rounded-2xl shadow-xl shadow-green-200 transition-all">
+                Mulai Monitoring
               </Button>
             </Link>
           </motion.div>
+
+          {/* Visual Container REVISI: Border & Fit Image */}
+          <div className="relative flex justify-center items-center">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 1 }}
+              className="relative w-full aspect-square max-w-[520px] bg-white rounded-[3.5rem] p-3 shadow-2xl border-[12px] border-white overflow-visible"
+            >
+              {/* Inner Background with Gradient */}
+              <div className="relative w-full h-full rounded-[2.8rem] bg-gradient-to-b from-pink-100 to-green-50 overflow-hidden flex items-center justify-center">
+                <Image
+                  src="/icons/pregnant.png"
+                  alt="Ibu Hamil"
+                  fill
+                  priority
+                  className="object-contain p-10 drop-shadow-xl"
+                />
+
+                {/* Floating Leaf INSIDE the box */}
+                <motion.div
+                  animate={{ rotate: [0, 5, 0], y: [0, -10, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute top-6 right-6 w-24 h-24 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg border border-green-100 z-10"
+                >
+                  <span className="text-5xl">🍃</span>
+                </motion.div>
+              </div>
+
+              {/* Status Badge OVERLAPPING the border slightly */}
+              <div className="absolute -bottom-6 -left-6 bg-white p-4 rounded-2xl shadow-xl z-20 flex items-center gap-3 border border-pink-50">
+                <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center text-2xl">🍼</div>
+                <div>
+                  <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Update Status</div>
+                  <div className="text-sm font-bold text-gray-800">Gizi Bayi Optimal</div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         </div>
 
-        {/* Section Artikel (Public) */}
-        <div className="mb-24">
-          <div className="flex justify-between items-end mb-8">
+        {/* Artikel Section */}
+        <div className="mb-32">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
             <div>
-              <h2 className="text-3xl font-bold text-gray-800">Edukasi Kesehatan</h2>
-              <p className="text-gray-500">Informasi terpercaya dari tenaga kesehatan profesional</p>
+              <h2 className="text-4xl font-bold text-gray-800">Edukasi Nutrisi</h2>
+              <p className="text-lg text-gray-500 mt-2">Informasi terpercaya untuk Ibu & Buah Hati</p>
             </div>
+            <Link href="/articles" className="text-green-600 font-bold hover:underline">Lihat Semua →</Link>
           </div>
 
           {loading ? (
-            <div className="grid md:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-64 bg-gray-100 animate-pulse rounded-2xl" />
-              ))}
+            <div className="grid md:grid-cols-3 gap-8">
+              {[1, 2, 3].map((i) => <div key={i} className="h-80 bg-gray-100 animate-pulse rounded-3xl" />)}
             </div>
           ) : (
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-3 gap-8">
               {articles.slice(0, 3).map((article) => (
-                /* REVISI: Link sekarang mengarah ke route publik /articles/[id] */
                 <Link key={article.id} href={`/articles/${article.id}`}>
-                  <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer border-pink-50">
-                    <div className="p-6">
-                      <span className="text-xs font-bold text-pink-500 uppercase tracking-wider">{article.category}</span>
-                      <h3 className="text-xl font-bold mt-2 mb-3 line-clamp-2">{article.title}</h3>
-                      <p className="text-gray-600 text-sm line-clamp-3 mb-4">
+                  <Card className="h-full hover:shadow-2xl transition-all border-none bg-white rounded-3xl overflow-hidden group">
+                    <div className="p-8">
+                      <span className="px-3 py-1 bg-green-50 text-green-600 text-xs font-bold rounded-lg">{article.category}</span>
+                      <h3 className="text-2xl font-bold my-4 line-clamp-2 text-gray-800 group-hover:text-green-700">{article.title}</h3>
+                      <p className="text-gray-500 line-clamp-3 mb-6 leading-relaxed text-sm">
                         {article.content.replace(/<[^>]*>/g, '')}
                       </p>
-                      <div className="flex items-center text-xs text-gray-400">
-                        <span>{article.publishedAt?.toLocaleDateString('id-ID')}</span>
+                      <div className="flex items-center justify-between pt-6 border-t border-gray-50 text-sm font-medium">
+                        <span className="text-gray-400">{article.publishedAt?.toLocaleDateString('id-ID')}</span>
+                        <span className="text-green-600">Baca Selengkapnya</span>
                       </div>
                     </div>
                   </Card>
@@ -175,73 +164,48 @@ export default function Home() {
           )}
         </div>
 
-        {/* Fitur Section */}
-        <div className="grid md:grid-cols-2 gap-8 mb-20">
-          <motion.div
-            whileHover={{ y: -10, scale: 1.02 }}
-            className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:border-pink-200 transition-all"
-          >
-            <div className="w-14 h-14 bg-pink-100 rounded-full flex items-center justify-center mb-4 text-3xl">
-              📊
-            </div>
-            <h2 className="text-3xl font-bold mb-2">Growth Tracking</h2>
-            <p className="text-gray-700">
-              Grafik pertumbuhan sesuai standar WHO. Pantau berat badan, tinggi, dan lingkar kepala secara real-time.
-            </p>
-          </motion.div>
-
-          <motion.div
-            whileHover={{ y: -10, scale: 1.02 }}
-            className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:border-pink-200 transition-all"
-          >
-            <div className="w-14 h-14 bg-pink-100 rounded-full flex items-center justify-center mb-4 text-3xl">
-              📖
-            </div>
-            <h2 className="text-3xl font-bold mb-2">Konsultasi Terpadu</h2>
-            <p className="text-gray-700">
-              Terhubung langsung dengan data di puskesmas sehingga tenaga kesehatan dapat memberikan tindak lanjut yang tepat.
-            </p>
-          </motion.div>
-        </div>
-
         {/* Statistik */}
-        <div ref={statsRef} className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-20">
+        <div ref={statsRef} className="bg-white rounded-[40px] p-12 shadow-sm border border-gray-50 grid grid-cols-2 md:grid-cols-4 gap-8 mb-32">
           {[
-            { label: 'Anak Terdaftar', value: '50K+', icon: '👶' },
-            { label: 'Puskesmas', value: '500+', icon: '🏥' },
-            { label: 'Tenaga Kesehatan', value: '2K+', icon: '👩‍⚕️' },
-            { label: 'Artikel', value: '1K+', icon: '📚' },
+            { label: 'Ibu Terbantu', value: '50K', icon: '🤰' },
+            { label: 'Desa Binaan', value: '120', icon: '🏡' },
+            { label: 'Konselor Gizi', value: '2K', icon: '👩‍⚕️' },
+            { label: 'Resep Kelor', value: '800', icon: '🥗' },
           ].map((stat, i) => (
-            <motion.div key={i} className="text-center p-4 rounded-xl hover:bg-pink-50 transition-colors">
-              <div className="text-4xl mb-2">{stat.icon}</div>
-              <div className="text-3xl font-bold text-gray-800">
-                {statsVisible ? (
-                  <AnimatedNumber value={parseInt(stat.value)} suffix={stat.value.includes('+') ? '+' : ''} />
-                ) : (
-                  stat.value
-                )}
+            <div key={i} className="text-center">
+              <div className="text-5xl mb-4">{stat.icon}</div>
+              <div className="text-4xl font-black text-gray-800">
+                {statsVisible ? <AnimatedNumber value={parseInt(stat.value)} suffix={stat.value.includes('K') ? 'K+' : '+'} /> : '0'}
               </div>
-              <div className="text-sm text-gray-500 mt-1">{stat.label}</div>
-            </motion.div>
+              <div className="text-xs font-bold text-gray-400 uppercase tracking-tighter mt-2">{stat.label}</div>
+            </div>
           ))}
         </div>
 
-        {/* CTA Section */}
-        <div className="bg-gradient-to-br from-pink-50 to-blue-50 rounded-3xl p-12 text-center relative overflow-hidden">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Mulai Pantau Tumbuh Kembangnya</h2>
-          <p className="text-gray-600 max-w-2xl mx-auto mb-8">
-            Hubungi puskesmas terdekat untuk mendapatkan akses akun GiziAnak dan mulai pantau kesehatan buah hati Anda.
-          </p>
-          <Link href="/login">
-            <Button className="bg-pink-500 hover:bg-pink-600 text-white px-8 py-3 text-lg rounded-full shadow-md">
-              MASUK KE DASHBOARD
-            </Button>
-          </Link>
+        {/* CTA */}
+        <div className="relative bg-green-900 rounded-[3rem] p-12 md:p-20 text-center overflow-hidden shadow-2xl">
+          <div className="absolute top-0 right-0 p-10 opacity-10 rotate-12 pointer-events-none">
+            <span className="text-[200px]">🍃</span>
+          </div>
+          <div className="relative z-10">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white leading-tight">
+              Mulai Masa Depan <br /> Sehat Bersama Kami
+            </h2>
+            <Link href="/login">
+              <Button className="bg-pink-500 text-white hover:bg-white-600 px-12 py-4 text-xl font-bold rounded-2xl shadow-xl">
+                Buka Dashboard
+              </Button>
+            </Link>
+          </div>
         </div>
       </main>
 
-      <footer className="border-t border-gray-200 py-8 text-center text-sm text-gray-500">
-        © 2026 GiziAnak. Dikelola dengan ❤️ untuk generasi sehat Indonesia.
+      <footer className="border-t border-gray-100 py-12 text-center bg-white/30">
+        <div className="flex justify-center items-center gap-2 mb-4">
+          <Image src="/icons/icon.png" alt="Logo" width={28} height={28} />
+          <span className="font-bold text-gray-800">MONIKEL 2026</span>
+        </div>
+        <p className="text-gray-400 text-sm">© 2026 Dikelola oleh Tim KKN Tematik Unhas - Universitas Hasanuddin.</p>
       </footer>
     </div>
   )

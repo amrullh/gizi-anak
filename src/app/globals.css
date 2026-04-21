@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* src/app/globals.css */
+@import 'leaflet/dist/leaflet.css';
 
 @theme {
   --color-background: hsl(var(--background));
@@ -28,6 +30,12 @@
 
   --animate-float: float 6s ease-in-out infinite;
   --animate-float-slow: float 8s ease-in-out infinite;
+}
+/* Pastikan leaflet bisa ambil tinggi penuh kontainernya */
+.leaflet-container {
+    width: 100%;
+    height: 100%;
+    z-index: 1;
 }
 
 @layer base {
