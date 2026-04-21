@@ -59,6 +59,12 @@ export interface PregnancyData {
 
     // Catatan Bulanan
     monthlyRecords?: MonthlyRecord[];
+    
+    fcmToken?: string;
+    notificationSettings?: {
+        enableReminders: boolean;
+        reminderTime: string; // Format "HH:mm", misal "08:00"
+    };
 
     // Sistem
     wilayah?: string;
