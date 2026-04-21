@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   FaPlus, FaSearch, FaSpinner, FaArrowLeft, FaCalendarCheck,
   FaChevronDown, FaChevronUp, FaTimes, FaCapsules, FaChartLine,
-  FaHistory, FaUserTie, FaGraduationCap, FaWeight
+  FaHistory, FaUserTie, FaGraduationCap, FaBabyCarriage, FaCheckCircle
 } from 'react-icons/fa';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -44,6 +44,13 @@ export default function AdminPregnancyPage() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [showComplaints, setShowComplaints] = useState(false);
   const [showPillDetail, setShowPillDetail] = useState<{ type: 'fe' | 'kelor' | null }>({ type: null });
+
+  // Birth feature state
+  const [showBirthForm, setShowBirthForm] = useState(false);
+  const [birthData, setBirthData] = useState({
+    tanggalLahir: new Date().toISOString().split('T')[0],
+    caraPersalinan: 'Normal' as 'Normal' | 'Tindakan (SC/Lainnya)',
+  });
 
   const [form, setForm] = useState({
     pemeriksaanTanggal: new Date().toISOString().split('T')[0],
@@ -89,27 +96,23 @@ export default function AdminPregnancyPage() {
     }
   }, [form.hpht]);
 
-  // Fetch list of pregnant mothers under this bidan or admin_puskesmas or global admin
+  // Fetch only active pregnancies (not yet born)
   const fetchPregnantList = async () => {
     if (!currentUser) return;
     setLoading(true);
     try {
       let q;
-      if (currentUser.role === 'bidan') {
-        q = query(
-          collection(db, 'pregnancies'),
-          where('bidanId', '==', currentUser.uid),
-          orderBy('updatedAt', 'desc')
-        );
-      } else if (currentUser.role === 'admin_puskesmas') {
-        q = query(
-          collection(db, 'pregnancies'),
-          where('wilayah', '==', currentUser.wilayah),
-          orderBy('updatedAt', 'desc')
-        );
+      const role = currentUser.role as any;
+      const pregRef = collection(db, 'pregnancies');
+
+      if (role === 'bidan') {
+        q = query(pregRef, where('bidanId', '==', currentUser.uid), where('isBorn', '==', false), orderBy('updatedAt', 'desc'));
+      } else if (role === 'admin_puskesmas') {
+        q = query(pregRef, where('wilayah', '==', currentUser.wilayah), where('isBorn', '==', false), orderBy('updatedAt', 'desc'));
       } else {
-        q = query(collection(db, 'pregnancies'), orderBy('updatedAt', 'desc'), limit(50));
+        q = query(pregRef, where('isBorn', '==', false), orderBy('updatedAt', 'desc'), limit(50));
       }
+
       const snap = await getDocs(q);
       setPregnantList(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     } catch (err) {
@@ -121,7 +124,7 @@ export default function AdminPregnancyPage() {
 
   useEffect(() => { fetchPregnantList(); }, [currentUser]);
 
-  // Search for new parents (only those assigned to this bidan or same wilayah for admin_puskesmas)
+  // Search for eligible mothers (not already pregnant)
   useEffect(() => {
     if (search.trim() === '') {
       setUsers([]);
@@ -133,25 +136,22 @@ export default function AdminPregnancyPage() {
       setLoading(true);
       try {
         let q;
-        if (currentUser.role === 'bidan') {
-          q = query(
-            collection(db, 'users'),
-            where('role', '==', 'parent'),
-            where('bidanId', '==', currentUser.uid)
-          );
-        } else if (currentUser.role === 'admin_puskesmas') {
-          q = query(
-            collection(db, 'users'),
-            where('role', '==', 'parent'),
-            where('wilayah', '==', currentUser.wilayah)
-          );
+        const role = currentUser.role as any;
+        const usersRef = collection(db, 'users');
+
+        if (role === 'bidan') {
+          q = query(usersRef, where('role', '==', 'parent'), where('bidanId', '==', currentUser.uid));
+        } else if (role === 'admin_puskesmas') {
+          q = query(usersRef, where('role', '==', 'parent'), where('wilayah', '==', currentUser.wilayah));
         } else {
-          q = query(collection(db, 'users'), where('role', '==', 'parent'), limit(100));
+          q = query(usersRef, where('role', '==', 'parent'), limit(100));
         }
+
         const snap = await getDocs(q);
         const allParents = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
         const existingUserIds = pregnantList.map(p => p.userId);
         const lowerSearch = search.toLowerCase();
+
         const filtered = allParents.filter(user =>
           !existingUserIds.includes(user.id) &&
           (user.name as string)?.toLowerCase().includes(lowerSearch)
@@ -177,9 +177,10 @@ export default function AdminPregnancyPage() {
     try {
       const payload: any = {
         userId: selectedUser.id,
-        bidanId: currentUser?.role === 'bidan' ? currentUser.uid : null,
+        bidanId: currentUser?.role === 'bidan' ? currentUser.uid : (selectedUser.bidanId || null),
         wilayah: selectedUser.wilayah || '',
         isPregnant: true,
+        isBorn: false,
         pemeriksaanTanggal: new Date(form.pemeriksaanTanggal),
         nama: selectedUser.name || '',
         umur: selectedUser.age || 0,
@@ -220,7 +221,42 @@ export default function AdminPregnancyPage() {
     }
   };
 
-  // Update Fe pill (with logging) - Batas 100
+  // Mark pregnancy as born (complete birth)
+  const handleCompleteBirth = async () => {
+    if (!monitoringUser) return;
+
+    try {
+      const hphtDate = monitoringUser.hpht.toDate();
+      const birthDate = new Date(birthData.tanggalLahir);
+
+      const diffTime = Math.abs(birthDate.getTime() - hphtDate.getTime());
+      const diffWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
+
+      let statusLahir = "Mature (Cukup Bulan)";
+      if (diffWeeks < 37) statusLahir = "Premature (Kurang Bulan)";
+      else if (diffWeeks > 42) statusLahir = "Post-mature (Lewat Bulan)";
+
+      const pregnancyRef = doc(db, 'pregnancies', monitoringUser.id);
+      await updateDoc(pregnancyRef, {
+        isBorn: true,
+        tanggalPersalinan: birthDate,
+        caraPersalinan: birthData.caraPersalinan,
+        statusLahir: statusLahir,
+        usiaGestasiLahir: diffWeeks,
+        isPregnant: false,
+        updatedAt: Timestamp.now()
+      });
+
+      alert(`Berhasil! Bayi lahir pada usia ${diffWeeks} minggu dengan status: ${statusLahir}`);
+      setMonitoringUser(null);
+      setShowBirthForm(false);
+      fetchPregnantList();
+    } catch (err: any) {
+      alert('Gagal memproses kelahiran: ' + err.message);
+    }
+  };
+
+  // Pill tracking: Fe
   const handleAddFePill = async () => {
     if (!monitoringUser) return;
     try {
@@ -248,7 +284,7 @@ export default function AdminPregnancyPage() {
     }
   };
 
-  // Update Kelor pill (with logging) - Batas 100
+  // Pill tracking: Kelor
   const handleAddKelorPill = async () => {
     if (!monitoringUser) return;
     try {
@@ -328,25 +364,21 @@ export default function AdminPregnancyPage() {
     return `${years} thn, ${months} bln`;
   };
 
-  // ========= FUNGSI BARU: menyiapkan data grafik yang sudah diurutkan =========
   const prepareChartData = (records: any[]) => {
     if (!records || records.length === 0) return [];
-    // Salin dan urutkan berdasarkan tanggal (lama ke baru)
     const sorted = [...records].sort((a, b) => {
       const dateA = a.tanggal?.toDate ? a.tanggal.toDate() : new Date(a.tanggal);
       const dateB = b.tanggal?.toDate ? b.tanggal.toDate() : new Date(b.tanggal);
       return dateA.getTime() - dateB.getTime();
     });
-    // Tambahkan field label bulan
     return sorted.map((rec, idx) => ({
       ...rec,
       bulanKe: `Bulan ke-${idx + 1}`,
       tanggalObj: rec.tanggal?.toDate ? rec.tanggal.toDate() : new Date(rec.tanggal)
     }));
   };
-  // ========================================================================
 
-  // ----- RENDER FORM -----
+  // ----- FORM VIEW (new pregnancy registration) -----
   if (view === 'form') return (
     <div className="max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500 bg-white">
       <button onClick={() => setView('select-user')} className="flex items-center gap-2 text-gray-500 hover:text-pink-600 font-medium transition-colors">
@@ -357,7 +389,6 @@ export default function AdminPregnancyPage() {
         <p className="text-gray-500 text-sm mt-1">Ibu: {selectedUser.name} | Wilayah: {selectedUser.wilayah || '-'}</p>
       </div>
       <form onSubmit={handleSave} className="space-y-6">
-        {/* Demografi */}
         <Card className="p-6 border border-gray-100 shadow-sm rounded-2xl bg-white">
           <h3 className="font-semibold text-gray-700 mb-6 border-b border-gray-100 pb-2 flex items-center gap-2">
             <span className="w-1.5 h-5 bg-pink-400 rounded-full"></span> Data Demografi Ibu
@@ -388,7 +419,6 @@ export default function AdminPregnancyPage() {
           </div>
         </Card>
 
-        {/* Paritas */}
         <Card className="p-6 border border-gray-100 shadow-sm rounded-2xl bg-white">
           <h3 className="font-semibold text-gray-700 mb-6 border-b border-gray-100 pb-2 flex items-center gap-2">
             <span className="w-1.5 h-5 bg-pink-400 rounded-full"></span> Paritas & Gravida
@@ -429,7 +459,6 @@ export default function AdminPregnancyPage() {
           </div>
         </Card>
 
-        {/* HPHT & HPL */}
         <Card className="p-6 border border-gray-100 shadow-sm rounded-2xl bg-white">
           <h3 className="font-semibold text-gray-700 mb-6 border-b border-gray-100 pb-2 flex items-center gap-2">
             <FaCalendarCheck className="text-pink-500 text-sm" /> Perhitungan Medis (HPHT)
@@ -452,7 +481,6 @@ export default function AdminPregnancyPage() {
           </div>
         </Card>
 
-        {/* Keluhan */}
         <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
           <button type="button" onClick={() => setShowComplaints(!showComplaints)} className="w-full p-4 flex justify-between items-center hover:bg-gray-50 transition-all">
             <span className="font-medium text-gray-600 text-xs uppercase tracking-wider">Catatan Keluhan (Opsional)</span>
@@ -516,7 +544,7 @@ export default function AdminPregnancyPage() {
         </Card>
       )}
 
-      {/* List of pregnancies */}
+      {/* List of active pregnancies */}
       <Card className="overflow-hidden border border-gray-100 shadow-sm rounded-2xl bg-white">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -545,7 +573,7 @@ export default function AdminPregnancyPage() {
                     <div className="font-semibold text-gray-800">{formatDateID(p.taksiranPersalinan)}</div>
                   </td>
                   <td className="p-4 text-center">
-                    <button onClick={() => setMonitoringUser(p)} className="bg-white border border-pink-200 text-pink-600 px-4 py-1.5 rounded-full text-[10px] font-bold hover:bg-pink-500 hover:text-white transition-all uppercase tracking-wider">
+                    <button onClick={() => { setMonitoringUser(p); setShowBirthForm(false); }} className="bg-white border border-pink-200 text-pink-600 px-4 py-1.5 rounded-full text-[10px] font-bold hover:bg-pink-500 hover:text-white transition-all uppercase tracking-wider">
                       Pantau
                     </button>
                   </td>
@@ -559,7 +587,7 @@ export default function AdminPregnancyPage() {
       {/* Monitoring Modal */}
       {monitoringUser && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col relative">
             <div className="p-6 border-b flex justify-between items-center bg-gradient-to-r from-pink-50 to-white">
               <div>
                 <h2 className="text-xl font-serif italic font-bold text-gray-800">Detail Monitoring</h2>
@@ -569,6 +597,54 @@ export default function AdminPregnancyPage() {
             </div>
 
             <div className="p-6 overflow-y-auto space-y-8">
+              {/* Birth completion button & form */}
+              <div className="flex justify-center border-b border-gray-100 pb-6">
+                <button
+                  onClick={() => setShowBirthForm(!showBirthForm)}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${showBirthForm ? 'bg-gray-100 text-gray-500' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-200 hover:scale-105'}`}
+                >
+                  <FaBabyCarriage size={16} />
+                  {showBirthForm ? 'Batal Menetapkan Kelahiran' : 'Ibu Sudah Melahirkan'}
+                </button>
+              </div>
+
+              {showBirthForm && (
+                <div className="p-6 bg-emerald-50 border-2 border-emerald-100 rounded-3xl animate-in zoom-in-95 duration-300">
+                  <h3 className="font-black text-emerald-800 text-xs uppercase tracking-widest mb-4 flex items-center gap-2"><FaCheckCircle /> Konfirmasi Persalinan</h3>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-emerald-600 uppercase ml-1">Tanggal Kelahiran</label>
+                      <input
+                        type="date"
+                        value={birthData.tanggalLahir}
+                        onChange={e => setBirthData({ ...birthData, tanggalLahir: e.target.value })}
+                        className="w-full p-3 bg-white border border-emerald-200 rounded-xl outline-none text-sm font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-emerald-600 uppercase ml-1">Cara Persalinan</label>
+                      <select
+                        value={birthData.caraPersalinan}
+                        onChange={e => setBirthData({ ...birthData, caraPersalinan: e.target.value as any })}
+                        className="w-full p-3 bg-white border border-emerald-200 rounded-xl outline-none text-sm font-bold"
+                      >
+                        <option value="Normal">Normal</option>
+                        <option value="Tindakan (SC/Lainnya)">Tindakan (SC/Lainnya)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleCompleteBirth}
+                    className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-100"
+                  >
+                    Simpan & Update Status Kelahiran
+                  </button>
+                  <p className="text-[9px] text-emerald-500 mt-3 text-center italic">
+                    * Sistem akan menghitung otomatis status bayi (Prematur/Mature) berdasarkan HPHT.
+                  </p>
+                </div>
+              )}
+
               {/* Demographic & Pregnancy Info Grid */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100">
@@ -589,7 +665,7 @@ export default function AdminPregnancyPage() {
                 </div>
               </div>
 
-              {/* ========= GRAFIK BERAT BADAN (REVISI DENGAN URUTAN BULAN) ========= */}
+              {/* Weight Chart */}
               {monitoringUser.monthlyRecords && monitoringUser.monthlyRecords.length > 0 && (() => {
                 const chartData = prepareChartData(monitoringUser.monthlyRecords);
                 const firstWeight = chartData[0]?.bb;
@@ -612,38 +688,10 @@ export default function AdminPregnancyPage() {
                       <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={chartData}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                          <XAxis
-                            dataKey="bulanKe"
-                            tick={{ fontSize: 10, fontWeight: 500, fill: '#6b7280' }}
-                            axisLine={false}
-                            tickLine={false}
-                            interval={0}
-                          />
-                          <YAxis
-                            domain={['dataMin - 1', 'dataMax + 2']}
-                            tick={{ fontSize: 10, fontWeight: 500, fill: '#6b7280' }}
-                            axisLine={false}
-                            tickLine={false}
-                            label={{ value: 'Berat (kg)', angle: -90, position: 'insideLeft', style: { fontSize: 10, fill: '#9ca3af' } }}
-                          />
-                          <Tooltip
-                            labelFormatter={(label, payload) => {
-                              if (payload && payload[0] && payload[0].payload.tanggalObj) {
-                                return formatDateID(payload[0].payload.tanggalObj);
-                              }
-                              return label;
-                            }}
-                            formatter={(value: any) => [`${value} kg`, 'Berat Badan']}
-                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="bb"
-                            stroke="#ec4899"
-                            strokeWidth={3}
-                            dot={{ r: 5, fill: '#ec4899', strokeWidth: 0 }}
-                            activeDot={{ r: 7, strokeWidth: 0 }}
-                          />
+                          <XAxis dataKey="bulanKe" tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false} interval={0} />
+                          <YAxis domain={['dataMin - 1', 'dataMax + 2']} tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false} label={{ value: 'Berat (kg)', angle: -90, position: 'insideLeft', style: { fontSize: 10, fill: '#9ca3af' } }} />
+                          <Tooltip labelFormatter={(label, payload) => payload && payload[0] ? formatDateID(payload[0].payload.tanggalObj) : label} formatter={(value: any) => [`${value} kg`, 'Berat Badan']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                          <Line type="monotone" dataKey="bb" stroke="#ec4899" strokeWidth={3} dot={{ r: 5, fill: '#ec4899' }} />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
@@ -654,7 +702,7 @@ export default function AdminPregnancyPage() {
                 );
               })()}
 
-              {/* Dual Pill Tracker (Fe & Kelor) */}
+              {/* Dual Pill Trackers */}
               <div className="grid md:grid-cols-2 gap-4">
                 {/* Fe Pill */}
                 <div className="bg-pink-50/50 border border-pink-100 p-5 rounded-2xl">
@@ -666,9 +714,7 @@ export default function AdminPregnancyPage() {
                     <div className="flex-1 bg-white h-3 rounded-full overflow-hidden border border-pink-100">
                       <div className="bg-pink-500 h-full transition-all duration-500" style={{ width: `${((monitoringUser.pillFeProgress || 0) / 100) * 100}%` }} />
                     </div>
-                    <button onClick={handleAddFePill} className="bg-pink-500 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-transform">
-                      <FaPlus size={20} />
-                    </button>
+                    <button onClick={handleAddFePill} className="bg-pink-500 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-transform"><FaPlus size={20} /></button>
                   </div>
                   {monitoringUser.pillFeLogs && monitoringUser.pillFeLogs.length > 0 && (
                     <div className="mt-4 border-t border-pink-100 pt-3">
@@ -698,9 +744,7 @@ export default function AdminPregnancyPage() {
                     <div className="flex-1 bg-white h-3 rounded-full overflow-hidden border border-green-100">
                       <div className="bg-green-500 h-full transition-all duration-500" style={{ width: `${((monitoringUser.pillKelorProgress || 0) / 100) * 100}%` }} />
                     </div>
-                    <button onClick={handleAddKelorPill} className="bg-green-500 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-transform">
-                      <FaPlus size={20} />
-                    </button>
+                    <button onClick={handleAddKelorPill} className="bg-green-500 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-transform"><FaPlus size={20} /></button>
                   </div>
                   {monitoringUser.pillKelorLogs && monitoringUser.pillKelorLogs.length > 0 && (
                     <div className="mt-4 border-t border-green-100 pt-3">
@@ -727,15 +771,15 @@ export default function AdminPregnancyPage() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-400 uppercase">BB (kg)</label>
-                    <input type="number" value={monthlyForm.bb} onChange={e => setMonthlyForm({ ...monthlyForm, bb: e.target.value })} className="w-full p-2.5 bg-white border rounded-xl text-sm outline-none focus:ring-1 focus:ring-pink-300" placeholder="0.0" />
+                    <input type="number" value={monthlyForm.bb} onChange={e => setMonthlyForm({ ...monthlyForm, bb: e.target.value })} className="w-full p-2.5 bg-white border rounded-xl text-sm outline-none" placeholder="0.0" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-400 uppercase">TB (cm)</label>
-                    <input type="number" value={monthlyForm.tb} onChange={e => setMonthlyForm({ ...monthlyForm, tb: e.target.value })} className="w-full p-2.5 bg-white border rounded-xl text-sm outline-none focus:ring-1 focus:ring-pink-300" placeholder="0" />
+                    <input type="number" value={monthlyForm.tb} onChange={e => setMonthlyForm({ ...monthlyForm, tb: e.target.value })} className="w-full p-2.5 bg-white border rounded-xl text-sm outline-none" placeholder="0" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-400 uppercase">HB (gr%)</label>
-                    <input type="number" step="0.1" value={monthlyForm.hb} onChange={e => setMonthlyForm({ ...monthlyForm, hb: e.target.value })} className="w-full p-2.5 bg-white border rounded-xl text-sm outline-none focus:ring-1 focus:ring-pink-300" placeholder="0.0" />
+                    <input type="number" step="0.1" value={monthlyForm.hb} onChange={e => setMonthlyForm({ ...monthlyForm, hb: e.target.value })} className="w-full p-2.5 bg-white border rounded-xl text-sm outline-none" placeholder="0.0" />
                     {monthlyForm.hb && (
                       <p className={`text-[9px] font-black italic mt-1 ${parseFloat(monthlyForm.hb) < 11.0 ? 'text-red-500' : 'text-green-600'}`}>
                         {parseFloat(monthlyForm.hb) < 11.0 ? '⚠️ STATUS: ANEMIA' : '✅ STATUS: NORMAL'}
@@ -744,7 +788,7 @@ export default function AdminPregnancyPage() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-400 uppercase">LILA (cm)</label>
-                    <input type="number" value={monthlyForm.lila} onChange={e => setMonthlyForm({ ...monthlyForm, lila: e.target.value })} className={`w-full p-2.5 bg-white border rounded-xl text-sm outline-none focus:ring-1 ${parseFloat(monthlyForm.lila) < 23.5 ? 'border-red-500 focus:ring-red-200' : 'focus:ring-pink-300'}`} placeholder="0.0" />
+                    <input type="number" value={monthlyForm.lila} onChange={e => setMonthlyForm({ ...monthlyForm, lila: e.target.value })} className={`w-full p-2.5 bg-white border rounded-xl text-sm outline-none ${parseFloat(monthlyForm.lila) < 23.5 ? 'border-red-500' : ''}`} placeholder="0.0" />
                     {monthlyForm.lila && (
                       <p className={`text-[9px] font-black italic mt-1 ${parseFloat(monthlyForm.lila) < 23.5 ? 'text-red-500' : 'text-green-600'}`}>
                         {parseFloat(monthlyForm.lila) < 23.5 ? '⚠️ STATUS: KEK' : '✅ STATUS: NORMAL'}
@@ -762,8 +806,8 @@ export default function AdminPregnancyPage() {
                   <h3 className="font-bold text-gray-800 text-xs uppercase tracking-widest">Riwayat Pemeriksaan</h3>
                   <div className="space-y-3">
                     {monitoringUser.monthlyRecords.slice().reverse().map((rec: any, idx: number) => (
-                      <div key={idx} className={`p-4 rounded-2xl border transition-all ${rec.statusLila === 'KEK' || rec.statusHb === 'ANEMIA' ? 'bg-red-50/50 border-red-100' : 'bg-white border-gray-100 shadow-sm'}`}>
-                        <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
+                      <div key={idx} className={`p-4 rounded-2xl border ${rec.statusLila === 'KEK' || rec.statusHb === 'ANEMIA' ? 'bg-red-50/50 border-red-100' : 'bg-white border-gray-100 shadow-sm'}`}>
+                        <div className="flex justify-between items-center mb-3">
                           <span className="text-xs font-bold text-gray-500">{formatDateID(rec.tanggal)}</span>
                           <div className="flex gap-2">
                             {rec.statusLila === 'KEK' && <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full font-black">RISIKO KEK</span>}
@@ -787,29 +831,19 @@ export default function AdminPregnancyPage() {
         </div>
       )}
 
-      {/* Modal Detail Riwayat Pil */}
+      {/* Pill Detail Modal */}
       {showPillDetail.type && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-2xl max-w-md w-full max-h-[80vh] overflow-auto">
             <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white">
-              <h3 className="font-bold text-gray-800">
-                Riwayat {showPillDetail.type === 'fe' ? 'Tablet Fe' : 'Kapsul Kelor'}
-              </h3>
-              <button onClick={() => setShowPillDetail({ type: null })} className="p-1 hover:bg-gray-100 rounded-full">
-                <FaTimes className="text-gray-500" />
-              </button>
+              <h3 className="font-bold text-gray-800">Riwayat {showPillDetail.type === 'fe' ? 'Tablet Fe' : 'Kapsul Kelor'}</h3>
+              <button onClick={() => setShowPillDetail({ type: null })} className="p-1 hover:bg-gray-100 rounded-full"><FaTimes className="text-gray-500" /></button>
             </div>
             <div className="p-4 space-y-2">
-              {(showPillDetail.type === 'fe'
-                ? monitoringUser.pillFeLogs
-                : monitoringUser.pillKelorLogs
-              )?.length === 0 && (
-                  <p className="text-gray-400 text-center py-4">Belum ada riwayat konsumsi</p>
-                )}
-              {(showPillDetail.type === 'fe'
-                ? monitoringUser.pillFeLogs
-                : monitoringUser.pillKelorLogs
-              )?.slice().reverse().map((log: any, idx: number) => (
+              {(showPillDetail.type === 'fe' ? monitoringUser.pillFeLogs : monitoringUser.pillKelorLogs)?.length === 0 && (
+                <p className="text-gray-400 text-center py-4">Belum ada riwayat konsumsi</p>
+              )}
+              {(showPillDetail.type === 'fe' ? monitoringUser.pillFeLogs : monitoringUser.pillKelorLogs)?.slice().reverse().map((log: any, idx: number) => (
                 <div key={idx} className="flex justify-between text-sm border-b border-gray-100 py-2">
                   <span className="font-medium">Minum ke-{log.count}</span>
                   <span className="text-gray-500">{formatDateID(log.date)}</span>
