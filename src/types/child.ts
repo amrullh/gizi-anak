@@ -6,6 +6,7 @@ export interface Child {
     gender: 'male' | 'female';
     birthWeight?: number;
     birthHeight?: number;
+    wilayah?: string; // Tambahkan baris ini
     createdAt: Date;
     updatedAt: Date;
     age?: number;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { Child } from '@/types/child';
@@ -10,6 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 interface ReportStats {
     totalChildren: number;
     totalParents: number;
+    totalPregnancies: number; // Tambahan untuk statistik hamil
     nutritionStatusCounts: {
         'Gizi Baik': number;
         'Gizi Kurang': number;
@@ -18,12 +19,13 @@ interface ReportStats {
         'Obesitas': number;
         'Belum Ada Data': number;
     };
-    childrenByKecamatan: Record<string, number>;
+    childrenByWilayah: Record<string, number>;
 }
 
 export function useReports() {
     const [loading, setLoading] = useState(false);
     const [stats, setStats] = useState<ReportStats | null>(null);
+    const { user: currentUser } = useAuth();
 
     const fetchReportData = async (
         type: 'monthly' | 'yearly' | 'custom',
@@ -34,7 +36,10 @@ export function useReports() {
     ) => {
         setLoading(true);
         try {
-            // Tentukan range tanggal
+            const role = currentUser?.role as any;
+            const userWilayah = currentUser?.wilayah;
+
+            // 1. Tentukan range tanggal
             let start: Date, end: Date;
             const now = new Date();
 
@@ -49,45 +54,62 @@ export function useReports() {
                 end = new Date(endDate);
                 end.setHours(23, 59, 59);
             } else {
-                // default: bulan ini
                 start = new Date(now.getFullYear(), now.getMonth(), 1);
                 end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
             }
 
-            // Ambil semua anak
-            const childrenSnapshot = await getDocs(collection(db, 'children'));
+            // 2. Query Data Anak (Filter wilayah jika bukan Admin Global)
+            let childrenQuery = query(collection(db, 'children'));
+            if (role === 'admin_puskesmas') {
+                // Catatan: Pastikan di koleksi children ada field 'wilayah'
+                childrenQuery = query(collection(db, 'children'), where('wilayah', '==', userWilayah));
+            } else if (role === 'bidan') {
+                childrenQuery = query(collection(db, 'children'), where('bidanId', '==', currentUser?.uid));
+            }
+
+            const childrenSnapshot = await getDocs(childrenQuery);
             const children = childrenSnapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data(),
                 birthDate: doc.data().birthDate?.toDate(),
             })) as Child[];
 
-            // Ambil semua user dengan role 'parent'
-            const parentsQuery = query(collection(db, 'users'), where('role', '==', 'parent'));
-            const parentsSnapshot = await getDocs(parentsQuery);
-            const parents = parentsSnapshot.docs.map(doc => doc.data());
+            // 3. Query Data Kehamilan (Export Baru)
+            let pregnancyQuery = query(collection(db, 'pregnancies'));
+            if (role === 'admin_puskesmas') {
+                pregnancyQuery = query(collection(db, 'pregnancies'), where('wilayah', '==', userWilayah));
+            } else if (role === 'bidan') {
+                pregnancyQuery = query(collection(db, 'pregnancies'), where('bidanId', '==', currentUser?.uid));
+            }
 
-            // Ambil semua growth records dalam range tanggal
+            const pregnancySnapshot = await getDocs(pregnancyQuery);
+            const pregnancies = pregnancySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                hpht: doc.data().hpht?.toDate(),
+                updatedAt: doc.data().updatedAt?.toDate(),
+            }));
+
+            // 4. Query Growth Records
             const recordsQuery = query(
                 collection(db, 'growthRecords'),
                 where('date', '>=', Timestamp.fromDate(start)),
                 where('date', '<=', Timestamp.fromDate(end))
             );
             const recordsSnapshot = await getDocs(recordsQuery);
-            const records = recordsSnapshot.docs.map(doc => ({
+            const allRecords = recordsSnapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data(),
                 date: doc.data().date?.toDate(),
             })) as GrowthRecord[];
 
-            // Hitung status gizi untuk setiap anak berdasarkan record terbaru
+            // Filter records hanya untuk anak yang masuk dalam scope wilayah
+            const validChildIds = children.map(c => c.id);
+            const records = allRecords.filter(r => validChildIds.includes(r.childId));
+
+            // 5. Kalkulasi Statistik
             const nutritionCounts = {
-                'Gizi Baik': 0,
-                'Gizi Kurang': 0,
-                'Gizi Lebih': 0,
-                'Gizi Buruk': 0,
-                'Obesitas': 0,
-                'Belum Ada Data': 0,
+                'Gizi Baik': 0, 'Gizi Kurang': 0, 'Gizi Lebih': 0, 'Gizi Buruk': 0, 'Obesitas': 0, 'Belum Ada Data': 0,
             };
 
             children.forEach(child => {
@@ -105,21 +127,27 @@ export function useReports() {
                 }
             });
 
-            // Hitung anak per kecamatan (dummy, karena kita tidak punya field kecamatan)
-            // Sementara buat dummy
-            const childrenByKecamatan: Record<string, number> = {
-                'Kecamatan A': 45,
-                'Kecamatan B': 38,
-                'Kecamatan C': 32,
-                'Lainnya': children.length - 115,
-            };
+            // Hitung distribusi wilayah asli
+            const countsByWilayah: Record<string, number> = {};
+            children.forEach(c => {
+                const w = c.wilayah || 'Tidak Terdata';
+                countsByWilayah[w] = (countsByWilayah[w] || 0) + 1;
+            });
 
             setStats({
                 totalChildren: children.length,
-                totalParents: parents.length,
+                totalParents: 0, // Bisa ditambahkan query user jika perlu
+                totalPregnancies: pregnancies.length,
                 nutritionStatusCounts: nutritionCounts,
-                childrenByKecamatan,
+                childrenByWilayah: countsByWilayah,
             });
+
+            // Kembalikan data mentah untuk kebutuhan fungsi export (xlsx/csv)
+            return {
+                children,
+                pregnancies,
+                records
+            };
 
         } catch (error) {
             console.error('Error fetching report data:', error);
