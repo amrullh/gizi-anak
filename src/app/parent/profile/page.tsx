@@ -120,15 +120,7 @@ export default function ProfilePage() {
                         </div>
                     </div>
 
-                    <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500 shrink-0">
-                            <FaBirthdayCake />
-                        </div>
-                        <div>
-                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Tempat, Tgl Lahir</p>
-                            <p className="font-bold text-gray-700">{userData?.ttl || '-'}</p>
-                        </div>
-                    </div>
+
                 </div>
             </Card>
 
