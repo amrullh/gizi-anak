@@ -12,6 +12,7 @@ import { db } from '@/lib/firebase/client'
 import { collection, query, where, getDocs, limit } from 'firebase/firestore'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
+import Image from 'next/image' // Import Image untuk logo
 
 interface ProblematicChild {
     name: string;
@@ -31,7 +32,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
     const [stuntedChildren, setStuntedChildren] = useState<ProblematicChild[]>([])
     const [bidanPhone, setBidanPhone] = useState<string | null>(null)
 
-    // 1. Logika Deteksi Masalah Gizi (Sinkron Admin)
+    // 1. Logika Deteksi Masalah Gizi (Tetap Sama)
     useEffect(() => {
         if (!childrenLoading && !recordsLoading && myChildren.length > 0 && user) {
             const hasAgreed = localStorage.getItem(`agreed_warning_${user.uid}`)
@@ -57,7 +58,6 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
                         method
                     )
 
-                    // Jika terdeteksi Gizi Buruk (BB/U) atau Sangat Pendek (TB/U)
                     if (result.weightStatus.color === 'red' || result.heightStatus.color === 'red') {
                         problematic.push({
                             name: child.name,
@@ -78,7 +78,6 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
         }
     }, [myChildren, records, childrenLoading, recordsLoading, user])
 
-    // 2. Perbaikan Error TS: Menggunakan parameter nullable
     const fetchBidanContact = async (wilayah: string | null | undefined) => {
         if (!wilayah) return;
         try {
@@ -97,7 +96,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
         }
     }
 
-    // 3. Proteksi Route
+    // 3. Proteksi Route (Tetap Sama)
     useEffect(() => {
         if (!authLoading) {
             if (!user || user.role !== 'parent') {
@@ -126,7 +125,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
 
     if (authLoading) return (
         <div className="min-h-screen flex items-center justify-center bg-white">
-            <FaSpinner className="animate-spin text-pink-500 text-3xl" />
+            <FaSpinner className="animate-spin text-green-600 text-3xl" />
         </div>
     )
 
@@ -163,8 +162,8 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
 
                         <div className="space-y-3 mb-8">
                             {steps.map((step, idx) => (
-                                <label key={idx} className={`flex items-start gap-3 p-4 border-2 rounded-2xl cursor-pointer transition-all ${agreedSteps.includes(step) ? 'border-pink-500 bg-pink-50' : 'border-gray-100 hover:border-pink-100'}`}>
-                                    <input type="checkbox" className="w-5 h-5 accent-pink-500 mt-0.5" onChange={() => handleCheckStep(step)} checked={agreedSteps.includes(step)} />
+                                <label key={idx} className={`flex items-start gap-3 p-4 border-2 rounded-2xl cursor-pointer transition-all ${agreedSteps.includes(step) ? 'border-green-600 bg-green-50' : 'border-gray-100 hover:border-green-100'}`}>
+                                    <input type="checkbox" className="w-5 h-5 accent-green-600 mt-0.5" onChange={() => handleCheckStep(step)} checked={agreedSteps.includes(step)} />
                                     <span className="text-xs font-bold text-gray-600 leading-relaxed">{step}</span>
                                 </label>
                             ))}
@@ -172,11 +171,11 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
 
                         {agreedSteps.length === steps.length && (
                             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
-                                <div className="bg-emerald-500 p-5 rounded-2xl text-white text-center shadow-lg shadow-emerald-100">
+                                <div className="bg-emerald-600 p-5 rounded-2xl text-white text-center shadow-lg shadow-emerald-100">
                                     <p className="text-[10px] font-black uppercase text-white/70 tracking-widest">Hubungi Bidan Wilayah</p>
                                     <p className="text-xl font-black text-white mt-1">{bidanPhone || 'Cek Menu Profil'}</p>
                                 </div>
-                                <Button fullWidth className="h-16 bg-gray-900 text-white font-black rounded-2xl uppercase tracking-widest" onClick={handleConfirmWarning}>
+                                <Button fullWidth className="h-16 bg-gray-900 text-white font-black rounded-2xl uppercase tracking-widest hover:bg-black transition-colors" onClick={handleConfirmWarning}>
                                     SAYA MENGERTI & LANJUT
                                 </Button>
                             </div>
@@ -185,16 +184,17 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
                 </div>
             )}
 
-            <header className="bg-white/80 backdrop-blur-md border-b sticky top-0 z-40">
-                <div className="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
+            {/* Header: Update Branding MONIKEL */}
+            <header className="bg-white/80 backdrop-blur-md border-b sticky top-0 z-40 shadow-sm">
+                <div className="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-pink-500 rounded-xl flex items-center justify-center">
-                            <span className="text-white font-black text-lg">G</span>
+                        <div className="relative w-8 h-8 overflow-hidden rounded-lg">
+                            <Image src="/icons/icon.png" alt="Logo" fill className="object-cover" />
                         </div>
-                        <span className="font-black text-gray-800 text-xl italic font-serif">GiziAnak</span>
+                        <span className="font-bold text-green-800 text-xl tracking-tight">MONIKEL</span>
                     </div>
                     <Link href="/parent/profile">
-                        <div className="w-8 h-8 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center font-bold text-sm border border-pink-200">
+                        <div className="w-9 h-9 bg-green-100 text-green-700 rounded-full flex items-center justify-center font-bold text-sm border border-green-200 shadow-sm">
                             {initial}
                         </div>
                     </Link>
@@ -205,16 +205,17 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
                 {children}
             </main>
 
-            <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-gray-100 z-50 pb-safe shadow-2xl">
+            {/* Bottom Nav: Update Colors */}
+            <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-100 z-50 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
                 <div className="max-w-5xl mx-auto px-10 py-4 flex justify-around items-center">
-                    <Link href="/parent/articles" className={`flex flex-col items-center gap-1.5 ${pathname.includes('articles') ? 'text-pink-500' : 'text-gray-400'}`}>
-                        <FaBook size={20} /><span className="text-[10px] font-black uppercase tracking-tighter">Edukasi</span>
+                    <Link href="/parent/articles" className={`flex flex-col items-center gap-1.5 transition-colors ${pathname.includes('articles') ? 'text-green-600' : 'text-gray-400'}`}>
+                        <FaBook size={20} /><span className="text-[10px] font-bold uppercase tracking-tighter">Edukasi</span>
                     </Link>
-                    <Link href="/parent/pregnancy" className={`flex flex-col items-center gap-1.5 ${pathname.includes('pregnancy') ? 'text-pink-500' : 'text-gray-400'}`}>
-                        <FaBaby size={22} /><span className="text-[10px] font-black uppercase tracking-tighter">Kehamilan</span>
+                    <Link href="/parent/pregnancy" className={`flex flex-col items-center gap-1.5 transition-colors ${pathname.includes('pregnancy') ? 'text-green-600' : 'text-gray-400'}`}>
+                        <FaBaby size={22} /><span className="text-[10px] font-bold uppercase tracking-tighter">Kehamilan</span>
                     </Link>
-                    <Link href="/parent/dashboard" className={`flex flex-col items-center gap-1.5 ${pathname.includes('dashboard') ? 'text-pink-500' : 'text-gray-400'}`}>
-                        <FaChartBar size={22} /><span className="text-[10px] font-black uppercase tracking-tighter">Laporan</span>
+                    <Link href="/parent/dashboard" className={`flex flex-col items-center gap-1.5 transition-colors ${pathname.includes('dashboard') ? 'text-green-600' : 'text-gray-400'}`}>
+                        <FaChartBar size={22} /><span className="text-[10px] font-bold uppercase tracking-tighter">Laporan</span>
                     </Link>
                 </div>
             </nav>
