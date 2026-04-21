@@ -29,7 +29,11 @@ interface User {
     lila?: number;
     isPregnant?: boolean;
     wilayah?: string; // Menyimpan lokasi/nama Puskesmas
-    bidanId?: string;
+    bidanId?: string;// Add this
+    coordinate?: {    // Add this
+        latitude: number;
+        longitude: number;
+    };
 }
 
 interface AuthContextType {
