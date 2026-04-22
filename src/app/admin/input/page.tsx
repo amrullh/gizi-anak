@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FaSearch, FaBaby, FaSpinner, FaArrowLeft, FaEdit, FaHistory, FaWeight, FaRulerVertical, FaCalendarAlt, FaCalculator, FaUserCircle } from 'react-icons/fa';
+import { FaSearch, FaBaby, FaSpinner, FaArrowLeft, FaEdit, FaHistory, FaWeight, FaRulerVertical, FaCalendarAlt, FaCalculator, FaUserCircle, FaHospitalAlt } from 'react-icons/fa';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { db } from '@/lib/firebase/client';
@@ -39,6 +39,9 @@ export default function AdminInputPage() {
         notes: ''
     });
 
+    // Cek Role Admin
+    const isAdmin = currentUser?.role === 'admin';
+
     // Perhitungan usia otomatis saat input tanggal lahir
     useEffect(() => {
         if (childForm.birthDate) {
@@ -52,7 +55,7 @@ export default function AdminInputPage() {
         }
     }, [childForm.birthDate]);
 
-    // FETCH PARENTS DENGAN FILTER ROLE (REVISI LOGIC SORTING)
+    // FETCH PARENTS DENGAN FILTER ROLE
     const fetchParents = async (searchQuery: string = '') => {
         if (!currentUser) return;
         setLoading(true);
@@ -63,7 +66,6 @@ export default function AdminInputPage() {
             const currentRole = (currentUser.role as unknown as string);
 
             if (currentRole === 'bidan') {
-                // BIDAN: Hanya bisa melihat Ibu yang ditugaskan kepadanya
                 q = query(
                     usersRef,
                     where('role', '==', 'parent'),
@@ -74,7 +76,6 @@ export default function AdminInputPage() {
                     limit(20)
                 );
             } else if (currentRole === 'admin_puskesmas') {
-                // ADMIN PUSKESMAS: Filter berdasarkan kesamaan Wilayah
                 q = query(
                     usersRef,
                     where('role', '==', 'parent'),
@@ -85,7 +86,6 @@ export default function AdminInputPage() {
                     limit(20)
                 );
             } else {
-                // ADMIN PUSAT: Bisa melihat semua Ibu (Tanpa filter wilayah)
                 q = query(
                     usersRef,
                     where('role', '==', 'parent'),
@@ -159,11 +159,11 @@ export default function AdminInputPage() {
                 <div className="text-right">
                     <p className="text-[10px] font-black text-gray-400 uppercase">Mengelola Pasien:</p>
                     <p className="font-bold text-gray-800">{selectedUser?.name}</p>
+                    <p className="text-[9px] text-pink-500 font-bold uppercase tracking-widest">{selectedUser?.wilayah}</p>
                 </div>
             </header>
 
             <div className="grid lg:grid-cols-2 gap-6">
-                {/* FORM PROFIL ANAK */}
                 <div className="space-y-4">
                     <Card className={editingChild ? "border-amber-200 bg-amber-50/50 shadow-inner" : "bg-white border-gray-100 shadow-sm"}>
                         <h3 className="font-black mb-6 flex items-center gap-2 text-gray-700 uppercase text-xs tracking-widest">
@@ -231,7 +231,6 @@ export default function AdminInputPage() {
                     </div>
                 </div>
 
-                {/* FORM INPUT PENGUKURAN */}
                 <div className="space-y-4">
                     {selectedChildId ? (
                         <>
@@ -333,7 +332,14 @@ export default function AdminInputPage() {
                             </div>
                             <div>
                                 <h3 className="font-black text-gray-800 uppercase tracking-tight text-lg line-clamp-1">{u.name}</h3>
-                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{u.phone}</p>
+                                {/* INFO WILAYAH PUSKESMAS DI TABEL UTAMA */}
+                                <div className="mt-1 flex items-center justify-center gap-1.5">
+                                    <FaHospitalAlt className="text-pink-400 text-[10px]" />
+                                    <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">
+                                        {u.wilayah || 'Umum'}
+                                    </span>
+                                </div>
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">{u.phone}</p>
                             </div>
                             <div className="pt-2 w-full">
                                 <Button onClick={() => { setSelectedUser(u); setView('input-anak'); }} variant="outline" fullWidth className="rounded-xl font-black text-[10px] py-3 uppercase tracking-[0.2em] border-2 group-hover:bg-pink-50 transition-all">

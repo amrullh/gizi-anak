@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   FaPlus, FaSearch, FaSpinner, FaArrowLeft, FaCalendarCheck,
   FaChevronDown, FaChevronUp, FaTimes, FaCapsules, FaChartLine,
-  FaHistory, FaUserTie, FaGraduationCap, FaBabyCarriage, FaCheckCircle
+  FaHistory, FaUserTie, FaGraduationCap, FaBabyCarriage, FaCheckCircle,
+  FaHospitalAlt
 } from 'react-icons/fa';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -44,6 +45,9 @@ export default function AdminPregnancyPage() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [showComplaints, setShowComplaints] = useState(false);
   const [showPillDetail, setShowPillDetail] = useState<{ type: 'fe' | 'kelor' | null }>({ type: null });
+
+  // Pengecekan Role Admin Pusat
+  const isAdmin = currentUser?.role === 'admin';
 
   // Birth feature state
   const [showBirthForm, setShowBirthForm] = useState(false);
@@ -381,7 +385,7 @@ export default function AdminPregnancyPage() {
   // ----- FORM VIEW (new pregnancy registration) -----
   if (view === 'form') return (
     <div className="max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500 bg-white">
-      <button onClick={() => setView('select-user')} className="flex items-center gap-2 text-gray-500 hover:text-pink-600 font-medium transition-colors">
+      <button onClick={() => setView('select-user')} className="flex items-center gap-2 text-gray-500 hover:text-pink-600 font-bold transition-colors text-sm uppercase tracking-wider">
         <FaArrowLeft /> Pilih Ulang User
       </button>
       <div className="bg-pink-50 border border-pink-100 p-6 rounded-2xl">
@@ -512,6 +516,9 @@ export default function AdminPregnancyPage() {
             <span className="text-xs font-medium uppercase tracking-[0.2em] text-pink-400">Monitoring Petugas</span>
           </div>
           <h1 className="text-2xl font-serif italic font-semibold text-gray-800">Daftar Ibu Hamil</h1>
+          <p className="text-gray-400 text-sm mt-1">
+            {isAdmin ? '📂 Full Access: Data Ibu Hamil Seluruh Wilayah' : `📍 Wilayah Kerja: ${currentUser?.wilayah || '-'}`}
+          </p>
         </div>
         <Button onClick={() => setView('select-user')} className="rounded-full px-5 py-2.5 bg-pink-500 text-white shadow-sm flex items-center">
           <FaPlus className="mr-2" size={12} /> Tambah Ibu Hamil
@@ -551,6 +558,7 @@ export default function AdminPregnancyPage() {
             <thead className="bg-gray-50 text-gray-500 font-semibold uppercase text-[10px] tracking-wider">
               <tr>
                 <th className="p-4">Identitas Ibu</th>
+                {isAdmin && <th className="p-4">Wilayah Puskesmas</th>}
                 <th className="p-4">Usia Kehamilan</th>
                 <th className="p-4">Taksiran Persalinan</th>
                 <th className="p-4 text-center">Opsi</th>
@@ -566,6 +574,14 @@ export default function AdminPregnancyPage() {
                       <span className="text-[9px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">Paritas: {p.jumlahAnakHidup}</span>
                     </div>
                   </td>
+                  {isAdmin && (
+                    <td className="p-4">
+                      <div className="flex items-center gap-1 text-blue-600 font-bold text-[11px]">
+                        <FaHospitalAlt className="text-[10px]" />
+                        {p.wilayah?.toUpperCase() || '-'}
+                      </div>
+                    </td>
+                  )}
                   <td className="p-4 font-medium text-pink-600">
                     {getGestationalAgeDisplay(p.hpht)}
                   </td>
@@ -589,8 +605,15 @@ export default function AdminPregnancyPage() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col relative">
             <div className="p-6 border-b flex justify-between items-center bg-gradient-to-r from-pink-50 to-white">
-              <div>
-                <h2 className="text-xl font-serif italic font-bold text-gray-800">Detail Monitoring</h2>
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-serif italic font-bold text-gray-800">Detail Monitoring</h2>
+                  {isAdmin && (
+                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-black rounded uppercase">
+                      {monitoringUser.wilayah}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-pink-500 font-medium">{monitoringUser.nama} • {renderAge(monitoringUser.tanggalLahir)}</p>
               </div>
               <button onClick={() => setMonitoringUser(null)} className="p-2 hover:bg-pink-100 rounded-full text-pink-500 transition-colors"><FaTimes size={20} /></button>

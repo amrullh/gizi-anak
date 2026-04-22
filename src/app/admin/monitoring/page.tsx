@@ -9,7 +9,8 @@ import {
     FaChartLine,
     FaHeartbeat,
     FaInfoCircle,
-    FaWaveSquare
+    FaWaveSquare,
+    FaHospitalAlt
 } from 'react-icons/fa'
 import Card from '@/components/ui/Card'
 import { useMonitoringData, MonitoringChild } from '@/hooks/useMonitoringData';
@@ -45,25 +46,24 @@ export default function MonitoringPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedChild, setSelectedChild] = useState<MonitoringChild | null>(null);
 
+    // Cek apakah user adalah Super Admin
+    const isAdmin = useMemo(() => user?.role === 'admin', [user]);
+
     const filteredData = useMemo(() => {
         return children.filter(child => {
-            // --- LOGIKA SORTIR BERDASARKAN ROLE (REVISI) ---
             const role = user?.role as any;
 
+            // --- LOGIKA SORTIR BERDASARKAN ROLE ---
             if (role === 'admin') {
                 // Admin Global: Lolos semua data
             } else if (role === 'admin_puskesmas') {
-                // Admin Puskesmas: Filter berdasarkan kesamaan wilayah
                 if (child.wilayah !== user?.wilayah) return false;
             } else if (role === 'bidan') {
-                // Bidan: Filter berdasarkan UID bidan yang menangani
                 if (child.bidanId !== user?.uid) return false;
             } else {
-                // Keamanan tambahan: Jika role tidak dikenal, sembunyikan data
                 return false;
             }
 
-            // --- SISANYA LOGIKA ASLI (TIDAK DIUBAH) ---
             const birthDate = convertTimestampToDate(child.birthDate);
             const ageData = calculateDetailedAge(birthDate);
 
@@ -80,12 +80,15 @@ export default function MonitoringPage() {
                 (selectedStatus === 'warning' && result.weightStatus.color === 'orange') ||
                 (selectedStatus === 'danger' && result.weightStatus.color === 'red');
 
-            const matchesSearch = child.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                child.parentName?.toLowerCase().includes(searchQuery.toLowerCase());
+            // Admin bisa cari berdasarkan nama anak, orang tua, atau wilayah puskesmas
+            const matchesSearch =
+                child.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                child.parentName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (isAdmin && child.wilayah?.toLowerCase().includes(searchQuery.toLowerCase()));
 
             return matchesStatus && matchesSearch;
         });
-    }, [children, selectedStatus, searchQuery, user]);
+    }, [children, selectedStatus, searchQuery, user, isAdmin]);
 
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center">
@@ -99,7 +102,9 @@ export default function MonitoringPage() {
                 <div>
                     <h1 className="text-2xl font-serif italic font-semibold text-gray-800">Monitoring Gizi (Permenkes 2020)</h1>
                     <p className="text-gray-400 text-sm">
-                        {(user?.role as any) === 'admin' ? 'Data Antropometri Nasional (Global)' : `Wilayah Kerja: ${user?.wilayah || '-'}`}
+                        {isAdmin
+                            ? '📂 Full Access: Data Antropometri Nasional (Global)'
+                            : `📍 Wilayah Kerja: ${user?.wilayah || '-'}`}
                     </p>
                 </div>
             </div>
@@ -109,7 +114,7 @@ export default function MonitoringPage() {
                     <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" />
                     <input
                         type="text"
-                        placeholder="Cari nama anak atau orang tua..."
+                        placeholder={isAdmin ? "Cari nama, orang tua, atau puskesmas..." : "Cari nama anak atau orang tua..."}
                         className="w-full pl-11 pr-4 py-3 bg-gray-50 border rounded-xl outline-none focus:ring-1 focus:ring-pink-300"
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -131,6 +136,7 @@ export default function MonitoringPage() {
                         <thead className="bg-gray-50 text-gray-400 font-bold uppercase text-[10px] tracking-widest">
                             <tr>
                                 <th className="p-4">Identitas Anak</th>
+                                {isAdmin && <th className="p-4">Asal Puskesmas</th>}
                                 <th className="p-4">Usia</th>
                                 <th className="p-4">BB/U</th>
                                 <th className="p-4">TB/U</th>
@@ -156,6 +162,14 @@ export default function MonitoringPage() {
                                             <div className="font-bold text-gray-700">{child.name}</div>
                                             <div className="text-[10px] text-gray-400 uppercase">{child.parentName}</div>
                                         </td>
+                                        {isAdmin && (
+                                            <td className="p-4">
+                                                <div className="flex items-center gap-1 text-blue-600 font-bold text-[11px]">
+                                                    <FaHospitalAlt className="text-[10px]" />
+                                                    {child.wilayah?.toUpperCase() || '-'}
+                                                </div>
+                                            </td>
+                                        )}
                                         <td className="p-4 text-gray-600">{age.label}</td>
                                         <td className="p-4">
                                             <span className={`inline-block px-2 py-1 rounded-full text-[10px] font-semibold border ${getBadgeColor(res.weightStatus.status)}`}>
@@ -189,13 +203,14 @@ export default function MonitoringPage() {
                 <DetailModal
                     child={selectedChild}
                     onClose={() => setSelectedChild(null)}
+                    isAdmin={isAdmin}
                 />
             )}
         </div>
     );
 }
 
-function DetailModal({ child, onClose }: { child: MonitoringChild; onClose: () => void }) {
+function DetailModal({ child, onClose, isAdmin }: { child: MonitoringChild; onClose: () => void, isAdmin: boolean }) {
     const { records } = useGrowthRecords(child.id);
     const birthDate = convertTimestampToDate(child.birthDate);
     const age = calculateDetailedAge(birthDate);
@@ -226,7 +241,14 @@ function DetailModal({ child, onClose }: { child: MonitoringChild; onClose: () =
                                 <FaBaby size={40} />
                             </div>
                             <div>
-                                <h2 className="text-3xl font-serif italic font-bold text-gray-800">{child.name}</h2>
+                                <div className="flex items-center gap-3">
+                                    <h2 className="text-3xl font-serif italic font-bold text-gray-800">{child.name}</h2>
+                                    {isAdmin && (
+                                        <span className="px-2 py-1 bg-blue-100 text-blue-700 text-[10px] font-black rounded-lg uppercase tracking-wider">
+                                            {child.wilayah}
+                                        </span>
+                                    )}
+                                </div>
                                 <p className="text-gray-500 font-medium">Usia: {age.label} ({age.totalMonths} bulan)</p>
                                 <p className="text-gray-400 text-sm">Orang tua: {child.parentName}</p>
                             </div>
