@@ -167,10 +167,10 @@ export default function Home() {
         {/* Statistik */}
         <div ref={statsRef} className="bg-white rounded-[40px] p-12 shadow-sm border border-gray-50 grid grid-cols-2 md:grid-cols-4 gap-8 mb-32">
           {[
-            { label: 'Ibu Terbantu', value: '50K', icon: '🤰' },
-            { label: 'Desa Binaan', value: '120', icon: '🏡' },
-            { label: 'Konselor Gizi', value: '2K', icon: '👩‍⚕️' },
-            { label: 'Resep Kelor', value: '800', icon: '🥗' },
+            { label: 'Ibu Terbantu', value: '', icon: '🤰' },
+            { label: 'Desa Binaan', value: '', icon: '🏡' },
+            { label: 'Konselor Gizi', value: '', icon: '👩‍⚕️' },
+            { label: 'Resep Kelor', value: '', icon: '🥗' },
           ].map((stat, i) => (
             <div key={i} className="text-center">
               <div className="text-5xl mb-4">{stat.icon}</div>
@@ -205,7 +205,7 @@ export default function Home() {
           <Image src="/icons/icon.png" alt="Logo" width={28} height={28} />
           <span className="font-bold text-gray-800">MONIKEL 2026</span>
         </div>
-        <p className="text-gray-400 text-sm">© 2026 Dikelola oleh Tim KKN Tematik Unhas - Universitas Hasanuddin.</p>
+        <p className="text-gray-400 text-sm">© 2026 Dikelola oleh Tim Peneilitian Politeknik Kesehatan Palu.</p>
       </footer>
     </div>
   )
