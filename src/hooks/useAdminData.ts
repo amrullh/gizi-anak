@@ -11,6 +11,7 @@ export function useAdminData() {
     const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [childrenData, setChildrenData] = useState<any[]>([]);
+    const [pregnancyData, setPregnancyData] = useState<any[]>([]); // Tambahan state kehamilan
     const [stats, setStats] = useState({
         totalChildren: 0,
         totalParents: 0,
@@ -67,7 +68,21 @@ export function useAdminData() {
                     });
                 });
 
-                // 2. QUERY CHILDREN (Hanya yang ortunya masuk filter di atas)
+                // 2. QUERY PREGNANCIES (Data Ibu Hamil sesuai hak akses wilayah)
+                let pregnanciesBaseQuery;
+                if (currentRole === 'admin') {
+                    pregnanciesBaseQuery = query(collection(db, 'pregnancies'));
+                } else if (currentRole === 'admin_puskesmas') {
+                    pregnanciesBaseQuery = query(collection(db, 'pregnancies'), where('wilayah', '==', userWilayah));
+                } else {
+                    pregnanciesBaseQuery = query(collection(db, 'pregnancies'), where('bidanId', '==', user.uid));
+                }
+
+                const pregSnap = await getDocs(pregnanciesBaseQuery);
+                const pregnancies = pregSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setPregnancyData(pregnancies);
+
+                // 3. QUERY CHILDREN (Hanya yang ortunya masuk filter di atas)
                 let childrenSnapDocs: any[] = [];
                 if (validParentIds.length > 0) {
                     // Firebase punya limit 'in' maksimal 10-30 ID, 
@@ -77,7 +92,7 @@ export function useAdminData() {
                     childrenSnapDocs = snap.docs;
                 }
 
-                // 3. FETCH GLOBAL DATA (Articles tetap global, Records difilter di memori nanti)
+                // 4. FETCH GLOBAL DATA (Articles tetap global, Records difilter di memori nanti)
                 const [articlesSnap, recordsSnap] = await Promise.all([
                     getDocs(collection(db, 'articles')),
                     getDocs(collection(db, 'growthRecords'))
@@ -97,7 +112,7 @@ export function useAdminData() {
                     }
                 });
 
-                // 4. DATA ENHANCEMENT & FILTERING
+                // 5. DATA ENHANCEMENT & FILTERING
                 let goodCount = 0;
                 const alertList: any[] = [];
 
@@ -159,7 +174,7 @@ export function useAdminData() {
                     };
                 });
 
-                // 5. SET FINAL STATES
+                // 6. SET FINAL STATES
                 setChildrenData(enhancedChildren);
                 setStats({
                     totalChildren: enhancedChildren.length,
@@ -182,5 +197,6 @@ export function useAdminData() {
         fetchData();
     }, [user]);
 
-    return { loading, stats, alerts, childrenData };
+    // Return ditambahkan pregnancyData
+    return { loading, stats, alerts, childrenData, pregnancyData };
 }
