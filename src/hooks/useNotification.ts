@@ -16,7 +16,7 @@ export function useNotifications() {
 
             if (permission === 'granted') {
                 const token = await getToken(messaging, {
-                    vapidKey: 'MASUKKAN_PUBLIC_VAPID_KEY_DARI_CONSOLE'
+                    vapidKey: 'BDy3GQV7rjsyyT_7IS30zapxF0eB_W315fCUwOq5sDYz9jB65MbZrehsXH5SIbh3MYclo6gDxF_TQXozebAhKpk'
                 });
 
                 if (token && pregnancy && pregnancy.fcmToken !== token) {

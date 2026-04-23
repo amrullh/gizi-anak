@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { AuthProvider } from "@/context/AuthContext"; 
-import 'leaflet/dist/leaflet.css';// <-- import AuthProvider
+import { AuthProvider } from "@/context/AuthContext";
+import { NotificationProvider } from "@/components/providers/NotificationProvider"; //
+import 'leaflet/dist/leaflet.css';
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,8 +30,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider> {/* <-- bungkus dengan AuthProvider */}
-          {children}
+        <AuthProvider>
+          {/* Tambahkan NotificationProvider di sini agar logic setupNotifications terpanggil */}
+          <NotificationProvider>
+            {children}
+          </NotificationProvider>
         </AuthProvider>
       </body>
     </html>
