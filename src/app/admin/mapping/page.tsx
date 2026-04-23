@@ -172,7 +172,7 @@ export default function AdminMappingPage() {
                     <h1 className="text-xl font-black text-gray-800 flex items-center gap-2"><FaMapMarkedAlt className="text-pink-500" /> SEBARAN DATA</h1>
                     <div className="mt-2 flex items-center gap-2 text-gray-400">
                         <FaClinicMedical className="text-xs" />
-                        <p className="text-[10px] font-bold uppercase tracking-widest">{currentUser?.wilayah || 'Global Morowali'}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest">{currentUser?.wilayah || 'Mapping'}</p>
                     </div>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
