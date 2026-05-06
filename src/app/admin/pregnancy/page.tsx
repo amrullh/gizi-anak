@@ -139,30 +139,36 @@ export default function AdminPregnancyPage() {
       if (!currentUser) return;
       setLoading(true);
       try {
+        const usersRef = collection(db, 'users');
         let q;
         const role = currentUser.role as any;
-        const usersRef = collection(db, 'users');
 
+        // 1. Menentukan Query Dasar (Tanpa Limit)
         if (role === 'bidan') {
           q = query(usersRef, where('role', '==', 'parent'), where('bidanId', '==', currentUser.uid));
         } else if (role === 'admin_puskesmas') {
           q = query(usersRef, where('role', '==', 'parent'), where('wilayah', '==', currentUser.wilayah));
         } else {
-          q = query(usersRef, where('role', '==', 'parent'), limit(100));
+          // Limit(100) dihapus agar Admin Global bisa melihat semua data
+          q = query(usersRef, where('role', '==', 'parent'));
         }
 
         const snap = await getDocs(q);
         const allParents = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-        const existingUserIds = pregnantList.map(p => p.userId);
+
+        // 2. Menggunakan Set untuk lookup ID yang lebih cepat (O(1) vs O(n))
+        const existingUserIds = new Set(pregnantList.map(p => p.userId));
         const lowerSearch = search.toLowerCase();
 
+        // 3. Filter data
         const filtered = allParents.filter(user =>
-          !existingUserIds.includes(user.id) &&
+          !existingUserIds.has(user.id) &&
           (user.name as string)?.toLowerCase().includes(lowerSearch)
         );
+
         setUsers(filtered);
       } catch (err: any) {
-        console.error(err);
+        console.error("Gagal melakukan pencarian:", err);
       } finally {
         setLoading(false);
       }
@@ -264,8 +270,22 @@ export default function AdminPregnancyPage() {
   const handleAddFePill = async () => {
     if (!monitoringUser) return;
     try {
+      const today = new Date().toISOString().split('T')[0]; // Format 'YYYY-MM-DD'
+
+      // 1. Cek apakah hari ini sudah ada log
+      const hasLoggedToday = monitoringUser.pillFeLogs?.some((log: any) => {
+        const logDate = log.date.toDate().toISOString().split('T')[0];
+        return logDate === today;
+      });
+
+      if (hasLoggedToday) {
+        return alert("Anda sudah mencatat konsumsi pil untuk hari ini.");
+      }
+
       const currentProgress = monitoringUser.pillFeProgress || 0;
       if (currentProgress >= 100) return alert("Target 100 pil Fe sudah tercapai.");
+
+      // 2. Jika belum, lanjutkan simpan
       const newProgress = currentProgress + 1;
       const newLog = { date: Timestamp.now(), count: newProgress };
       const updatedLogs = [...(monitoringUser.pillFeLogs || []), newLog];
@@ -282,6 +302,7 @@ export default function AdminPregnancyPage() {
         pillFeProgress: newProgress,
         pillFeLogs: updatedLogs
       }));
+
       fetchPregnantList();
     } catch (err: any) {
       alert('Gagal update pil Fe: ' + err.message);
@@ -292,8 +313,22 @@ export default function AdminPregnancyPage() {
   const handleAddKelorPill = async () => {
     if (!monitoringUser) return;
     try {
+      const today = new Date().toISOString().split('T')[0]; // Format 'YYYY-MM-DD'
+
+      // 1. Cek apakah hari ini sudah ada log untuk Kapsul Kelor
+      const hasLoggedToday = monitoringUser.pillKelorLogs?.some((log: any) => {
+        const logDate = log.date.toDate().toISOString().split('T')[0];
+        return logDate === today;
+      });
+
+      if (hasLoggedToday) {
+        return alert("Anda sudah mencatat konsumsi kapsul kelor untuk hari ini.");
+      }
+
       const current = monitoringUser.pillKelorProgress || 0;
-      if (current >= 100) return alert("Target 100 pil Kelor sudah tercapai.");
+      if (current >= 100) return alert("Target 100 kapsul Kelor sudah tercapai.");
+
+      // 2. Jika belum, lanjutkan simpan
       const newProgress = current + 1;
       const newLog = { date: Timestamp.now(), count: newProgress };
       const updatedLogs = [...(monitoringUser.pillKelorLogs || []), newLog];
@@ -304,17 +339,18 @@ export default function AdminPregnancyPage() {
         pillKelorLogs: updatedLogs,
         updatedAt: Timestamp.now()
       });
+
       setMonitoringUser((prev: any) => ({
         ...prev,
         pillKelorProgress: newProgress,
         pillKelorLogs: updatedLogs
       }));
+
       fetchPregnantList();
     } catch (err: any) {
-      alert('Gagal update pil Kelor: ' + err.message);
+      alert('Gagal update kapsul Kelor: ' + err.message);
     }
   };
-
   // Save monthly examination record
   const handleSaveMonthly = async () => {
     if (!monitoringUser) return;
