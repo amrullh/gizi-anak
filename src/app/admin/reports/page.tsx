@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
     FaFilePdf, FaFileExcel, FaDownload,
     FaBaby, FaCalendarAlt, FaFemale, FaCapsules, FaHospitalAlt
@@ -10,6 +10,8 @@ import { useAdminData } from '@/hooks/useAdminData'
 import { generateExcelReport, generatePDFReport } from '@/lib/reportGenerator'
 import { calculateNutritionalStatus } from '@/utils/nutrition'
 import { useAuth } from '@/context/AuthContext'
+import { db } from '@/lib/firebase/client'
+import { collection, query, where, getDocs } from 'firebase/firestore'
 import {
     PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
     BarChart, Bar, XAxis, YAxis
@@ -17,8 +19,10 @@ import {
 
 export default function ReportsPage() {
     const { user } = useAuth();
-    // pregnancyData di sini berasal dari useAdminData yang mengambil dari koleksi 'pregnancies'
     const { loading, childrenData, pregnancyData } = useAdminData() as any;
+
+    // State untuk mapping Bidan
+    const [bidanMap, setBidanMap] = useState<Record<string, string>>({});
 
     const [reportType, setReportType] = useState<'monthly' | 'yearly' | 'custom'>('monthly')
     const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7))
@@ -28,6 +32,24 @@ export default function ReportsPage() {
     const [isGenerating, setIsGenerating] = useState(false)
 
     const isAdminGlobal = useMemo(() => user?.role === 'admin', [user]);
+
+    // Fetch daftar bidan untuk kebutuhan laporan
+    useEffect(() => {
+        const fetchBidanData = async () => {
+            try {
+                const q = query(collection(db, 'users'), where('role', '==', 'bidan'));
+                const snap = await getDocs(q);
+                const map: Record<string, string> = {};
+                snap.docs.forEach(doc => {
+                    map[doc.id] = doc.data().name;
+                });
+                setBidanMap(map);
+            } catch (err) {
+                console.error("Gagal mengambil data bidan:", err);
+            }
+        };
+        fetchBidanData();
+    }, []);
 
     // ================= DATA ANAK =================
     const processedChildren = useMemo(() => {
@@ -57,26 +79,26 @@ export default function ReportsPage() {
             });
     }, [childrenData, user, isAdminGlobal]);
 
-    // ================= DATA IBU (FIXED FETCHING) =================
+    // ================= DATA IBU (REVISI: Filter aktif & Join Nama Bidan) =================
     const processedPregnancies = useMemo(() => {
         if (!pregnancyData) return [];
 
         return pregnancyData
             .filter((p: any) => {
-                // Logika Filter Wilayah sesuai Referensi
-                if (isAdminGlobal) return true;
-                return p.wilayah === user?.wilayah;
+                const isWilayahMatch = isAdminGlobal || p.wilayah === user?.wilayah;
+                const isNotBorn = p.isBorn === false; // Filter hanya hamil aktif
+                return isWilayahMatch && isNotBorn;
             })
             .map((p: any) => {
-                // Konversi taksiran persalinan sesuai format Firebase Timestamp di referensi
                 const hplDate = p.taksiranPersalinan?.toDate
                     ? p.taksiranPersalinan.toDate()
                     : p.taksiranPersalinan ? new Date(p.taksiranPersalinan) : null;
 
                 return {
                     nama: p.nama || 'Tanpa Nama',
+                    namaBidan: bidanMap[p.bidanId] || 'Bidan Tidak Terdaftar', // MAPPING NAMA BIDAN
                     wilayah: p.wilayah || 'UMUM',
-                    status: p.isBorn ? 'Sudah Lahir' : 'Hamil',
+                    status: 'Hamil',
                     usiaHamil: `${p.umurKehamilanMinggu || 0} Minggu`,
                     hpl: hplDate ? hplDate.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '-',
                     feProgress: p.pillFeProgress || 0,
@@ -86,7 +108,7 @@ export default function ReportsPage() {
                     kondisiLahir: p.statusLahir || '-'
                 };
             });
-    }, [pregnancyData, user, isAdminGlobal]);
+    }, [pregnancyData, user, isAdminGlobal, bidanMap]);
 
     // ================= RINGKASAN WILAYAH =================
     const summaryStats = useMemo(() => {
@@ -108,7 +130,7 @@ export default function ReportsPage() {
         };
     }, [processedChildren, processedPregnancies]);
 
-    // ================= CHART DATA =================
+    // ... (Fungsi childChartStats, pregnancyChartStats, supplementStats tetap sama)
     const childChartStats = useMemo(() => {
         const counts = { Baik: 0, Waspada: 0, Buruk: 0 };
         processedChildren.forEach((d: any) => {
@@ -119,14 +141,9 @@ export default function ReportsPage() {
         return Object.entries(counts).map(([name, value]) => ({ name, value }));
     }, [processedChildren]);
 
-    const pregnancyChartStats = useMemo(() => {
-        const hamil = processedPregnancies.filter((p: any) => p.status === 'Hamil').length;
-        const lahir = processedPregnancies.filter((p: any) => p.status === 'Sudah Lahir').length;
-        return [
-            { name: 'Sedang Hamil', value: hamil, color: '#ec4899' },
-            { name: 'Sudah Lahir', value: lahir, color: '#8b5cf6' }
-        ];
-    }, [processedPregnancies]);
+    const pregnancyChartStats = useMemo(() => [
+        { name: 'Sedang Hamil', value: processedPregnancies.length, color: '#ec4899' }
+    ], [processedPregnancies]);
 
     const supplementStats = useMemo(() => {
         if (processedPregnancies.length === 0) return [
@@ -226,7 +243,7 @@ export default function ReportsPage() {
                             </ResponsiveContainer>
                         </div>
                         <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase">Total Ibu</p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase">Total Ibu Hamil</p>
                             <p className="text-4xl font-black">{summaryStats.totalPregnancy}</p>
                             <div className="mt-4 space-y-1 max-h-[100px] overflow-auto">
                                 {summaryStats.pregDetails.map((w, i) => (
