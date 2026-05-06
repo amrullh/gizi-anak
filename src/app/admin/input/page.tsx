@@ -72,8 +72,8 @@ export default function AdminInputPage() {
                     where('bidanId', '==', currentUser.uid),
                     where('name', '>=', searchQuery),
                     where('name', '<=', searchQuery + '\uf8ff'),
-                    orderBy('name'),
-                    limit(20)
+                    orderBy('name')
+                    // limit(20) dihapus
                 );
             } else if (currentRole === 'admin_puskesmas') {
                 q = query(
@@ -82,8 +82,8 @@ export default function AdminInputPage() {
                     where('wilayah', '==', currentUser.wilayah),
                     where('name', '>=', searchQuery),
                     where('name', '<=', searchQuery + '\uf8ff'),
-                    orderBy('name'),
-                    limit(20)
+                    orderBy('name')
+                    // limit(20) dihapus
                 );
             } else {
                 q = query(
@@ -91,8 +91,8 @@ export default function AdminInputPage() {
                     where('role', '==', 'parent'),
                     where('name', '>=', searchQuery),
                     where('name', '<=', searchQuery + '\uf8ff'),
-                    orderBy('name'),
-                    limit(20)
+                    orderBy('name')
+                    // limit(20) dihapus
                 );
             }
 
