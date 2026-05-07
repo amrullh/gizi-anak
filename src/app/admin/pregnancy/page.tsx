@@ -5,7 +5,7 @@ import {
   FaPlus, FaSearch, FaSpinner, FaArrowLeft, FaCalendarCheck,
   FaChevronDown, FaChevronUp, FaTimes, FaCapsules, FaChartLine,
   FaHistory, FaUserTie, FaGraduationCap, FaBabyCarriage, FaCheckCircle,
-  FaHospitalAlt
+  FaHospitalAlt, FaClock //
 } from 'react-icons/fa';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -125,7 +125,36 @@ export default function AdminPregnancyPage() {
       setLoading(false);
     }
   };
+  // Ganti fungsi formatDateID lama atau tambahkan ini
+  const formatDateTimeID = (date: any) => {
+    if (!date) return '-';
+    try {
+      // Cek apakah ini Timestamp Firestore atau Date biasa
+      const d = date.toDate ? date.toDate() : new Date(date);
 
+      // Validasi apakah hasilnya benar-benar tanggal yang valid
+      if (isNaN(d.getTime())) return '-';
+
+      return d.toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }) + ' WITA';
+    } catch (e) {
+      return '-';
+    }
+  };
+
+  const formatDateOnlyID = (date: any) => {
+    if (!date) return '-';
+    try {
+      const d = date.toDate ? date.toDate() : new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch (e) {
+      return '-';
+    }
+  };
   useEffect(() => { fetchPregnantList(); }, [currentUser]);
 
   // Search for eligible mothers (not already pregnant)
@@ -891,23 +920,42 @@ export default function AdminPregnancyPage() {
       )}
 
       {/* Pill Detail Modal */}
+      {/* Di dalam modal riwayat suplemen */}
+      {/* Inside the monitoring modal, after the "Riwayat Pemeriksaan" section, before closing divs */}
+      {/* Add this right before the two closing </div> of the modal content */}
+
+      {/* Pill Detail Modal - now safely inside monitoringUser block */}
       {showPillDetail.type && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full max-h-[80vh] overflow-auto">
-            <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white">
-              <h3 className="font-bold text-gray-800">Riwayat {showPillDetail.type === 'fe' ? 'Tablet Fe' : 'Kapsul Kelor'}</h3>
-              <button onClick={() => setShowPillDetail({ type: null })} className="p-1 hover:bg-gray-100 rounded-full"><FaTimes className="text-gray-500" /></button>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+              <h3 className="font-bold text-gray-800">
+                Riwayat Lengkap {showPillDetail.type === 'fe' ? 'Tablet Fe' : 'Kapsul Kelor'}
+              </h3>
+              <button onClick={() => setShowPillDetail({ type: null })} className="p-1 hover:bg-gray-200 rounded-full">
+                <FaTimes />
+              </button>
             </div>
-            <div className="p-4 space-y-2">
-              {(showPillDetail.type === 'fe' ? monitoringUser.pillFeLogs : monitoringUser.pillKelorLogs)?.length === 0 && (
-                <p className="text-gray-400 text-center py-4">Belum ada riwayat konsumsi</p>
-              )}
-              {(showPillDetail.type === 'fe' ? monitoringUser.pillFeLogs : monitoringUser.pillKelorLogs)?.slice().reverse().map((log: any, idx: number) => (
-                <div key={idx} className="flex justify-between text-sm border-b border-gray-100 py-2">
-                  <span className="font-medium">Minum ke-{log.count}</span>
-                  <span className="text-gray-500">{formatDateID(log.date)}</span>
+            <div className="p-4 overflow-y-auto space-y-2">
+              {(showPillDetail.type === 'fe'
+                ? monitoringUser.pillFeLogs
+                : monitoringUser.pillKelorLogs
+              )?.slice().reverse().map((log: any, idx: number) => (
+                <div key={idx} className="flex justify-between items-center border-b border-gray-100 py-3">
+                  <div>
+                    <span className="font-black text-gray-800 text-sm">Konsumsi ke-{log.count}</span>
+                    <span className="text-[10px] text-pink-500 font-bold ml-2">
+                      <FaClock className="inline mr-1" size={10} /> Pukul {formatDateTimeID(log.date)}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[11px] text-gray-500">{formatDateOnlyID(log.date)}</span>
+                  </div>
                 </div>
               ))}
+              {(!monitoringUser.pillFeLogs || monitoringUser.pillFeLogs.length === 0) && (
+                <p className="text-center text-gray-400 text-sm">Belum ada riwayat</p>
+              )}
             </div>
           </div>
         </div>
