@@ -6,6 +6,7 @@ import { usePregnancy } from '@/hooks/usePregnancy'
 import { calculateGestationalAge } from '@/utils/pregnancy'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
+import { Timestamp } from 'firebase/firestore' // Tambahkan import ini jika belum
 import {
     FaCapsules,
     FaClock,
@@ -21,32 +22,35 @@ export default function ParentPregnancyPage() {
     const { pregnancy, loading, savePregnancy, refresh } = usePregnancy()
     const [updatingType, setUpdatingType] = useState<'fe' | 'kelor' | null>(null)
 
-    // AMBIL DATA HB TERBARU DARI monthlyRecords
+    // Logika cek apakah sudah minum hari ini
+    const dailyStatus = useMemo(() => {
+        const today = new Date().toISOString().split('T')[0];
+
+        const checkLogged = (logs: any[]) => {
+            if (!logs) return false;
+            return logs.some(log => {
+                const logDate = log.date.toDate ? log.date.toDate() : new Date(log.date);
+                return logDate.toISOString().split('T')[0] === today;
+            });
+        };
+
+        return {
+            hasFeToday: checkLogged(pregnancy?.pillFeLogs || []),
+            hasKelorToday: checkLogged(pregnancy?.pillKelorLogs || [])
+        };
+    }, [pregnancy?.pillFeLogs, pregnancy?.pillKelorLogs]);
+
+    // ... (latestMedicalData & formatDate tetap sama)
     const latestMedicalData = useMemo(() => {
         if (!pregnancy?.monthlyRecords || pregnancy.monthlyRecords.length === 0) {
             return { hb: null, status: 'Belum Ada Data', color: 'text-gray-400', bg: 'bg-gray-50', borderColor: 'border-l-blue-500' };
         }
-
-        // Ambil record terakhir di array
         const latest = pregnancy.monthlyRecords[pregnancy.monthlyRecords.length - 1];
         const hbValue = latest.hb;
-
         if (hbValue < 11.0) {
-            return {
-                hb: hbValue,
-                status: 'ANEMIA',
-                color: 'text-red-600',
-                bg: 'bg-red-50',
-                borderColor: 'border-l-red-500'
-            };
+            return { hb: hbValue, status: 'ANEMIA', color: 'text-red-600', bg: 'bg-red-50', borderColor: 'border-l-red-500' };
         }
-        return {
-            hb: hbValue,
-            status: 'NORMAL',
-            color: 'text-emerald-600',
-            bg: 'bg-emerald-50',
-            borderColor: 'border-l-blue-500'
-        };
+        return { hb: hbValue, status: 'NORMAL', color: 'text-emerald-600', bg: 'bg-emerald-50', borderColor: 'border-l-blue-500' };
     }, [pregnancy?.monthlyRecords]);
 
     const formatDate = (date: any) => {
@@ -57,8 +61,12 @@ export default function ParentPregnancyPage() {
 
     const handleLogSupplement = async (type: 'fe' | 'kelor') => {
         if (!pregnancy || updatingType) return
-        setUpdatingType(type)
 
+        // Proteksi Tambahan di Level Fungsi
+        if (type === 'fe' && dailyStatus.hasFeToday) return alert("Bunda sudah mencatat konsumsi Zat Besi hari ini.");
+        if (type === 'kelor' && dailyStatus.hasKelorToday) return alert("Bunda sudah mencatat konsumsi Kapsul Kelor hari ini.");
+
+        setUpdatingType(type)
         try {
             const { id, userId, createdAt, updatedAt, ...cleanData } = pregnancy;
             const payload: any = {
@@ -115,7 +123,7 @@ export default function ParentPregnancyPage() {
                 <p className="text-gray-500 text-sm">Monitoring harian kesehatan Bunda & Si Kecil.</p>
             </header>
 
-            {/* Card Usia Kehamilan */}
+            {/* ... Card Usia & Card HB tetap sama ... */}
             <Card className="p-8 bg-gradient-to-br from-pink-500 to-rose-400 text-white border-none shadow-xl shadow-pink-100 rounded-3xl">
                 <div className="flex justify-between items-start">
                     <div>
@@ -129,7 +137,6 @@ export default function ParentPregnancyPage() {
                 </div>
             </Card>
 
-            {/* STATUS HB DIAMBIL DARI LATEST DATA */}
             <Card className={`p-5 border-l-4 ${latestMedicalData.borderColor} flex justify-between items-center bg-white rounded-2xl shadow-sm`}>
                 <div className="flex items-center gap-3">
                     <div className={`p-2 ${latestMedicalData.bg} ${latestMedicalData.color} rounded-lg`}>
@@ -158,35 +165,47 @@ export default function ParentPregnancyPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="p-6 border-t-4 border-t-purple-500 rounded-3xl shadow-sm">
+                {/* SEKSI ZAT BESI */}
+                <Card className={`p-6 border-t-4 ${dailyStatus.hasFeToday ? 'border-t-gray-300 bg-gray-50' : 'border-t-purple-500'} rounded-3xl shadow-sm transition-colors`}>
                     <div className="flex justify-between items-center mb-6">
                         <div className="flex items-center gap-2">
-                            <FaCapsules className="text-purple-500" />
+                            <FaCapsules className={dailyStatus.hasFeToday ? 'text-gray-400' : 'text-purple-500'} />
                             <h3 className="font-black text-gray-800 text-xs uppercase tracking-tighter">Zat Besi (Fe)</h3>
                         </div>
-                        <span className="text-lg font-black text-purple-600">{pregnancy.pillFeProgress || 0}/100</span>
+                        <span className={`text-lg font-black ${dailyStatus.hasFeToday ? 'text-gray-400' : 'text-purple-600'}`}>{pregnancy.pillFeProgress || 0}/100</span>
                     </div>
-                    <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden mb-6">
-                        <div className="bg-purple-500 h-full transition-all duration-700" style={{ width: `${Math.min(((pregnancy.pillFeProgress || 0) / 100) * 100, 100)}%` }} />
+                    <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden mb-6">
+                        <div className={`${dailyStatus.hasFeToday ? 'bg-gray-400' : 'bg-purple-500'} h-full transition-all duration-700`} style={{ width: `${Math.min(((pregnancy.pillFeProgress || 0) / 100) * 100, 100)}%` }} />
                     </div>
-                    <Button fullWidth className="h-16 bg-purple-600 text-white font-black rounded-2xl active:scale-95 transition-transform" onClick={() => handleLogSupplement('fe')} disabled={!!updatingType}>
-                        {updatingType === 'fe' ? <FaSpinner className="animate-spin" /> : "SUDAH MINUM Fe"}
+                    <Button
+                        fullWidth
+                        className={`h-16 font-black rounded-2xl transition-all ${dailyStatus.hasFeToday ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-purple-600 text-white active:scale-95'}`}
+                        onClick={() => handleLogSupplement('fe')}
+                        disabled={!!updatingType || dailyStatus.hasFeToday}
+                    >
+                        {updatingType === 'fe' ? <FaSpinner className="animate-spin" /> : dailyStatus.hasFeToday ? "SUDAH MINUM HARI INI" : "SUDAH MINUM Fe"}
                     </Button>
                 </Card>
 
-                <Card className="p-6 border-t-4 border-t-emerald-500 rounded-3xl shadow-sm">
+                {/* SEKSI KELOR */}
+                <Card className={`p-6 border-t-4 ${dailyStatus.hasKelorToday ? 'border-t-gray-300 bg-gray-50' : 'border-t-emerald-500'} rounded-3xl shadow-sm transition-colors`}>
                     <div className="flex justify-between items-center mb-6">
-                        <div className="flex items-center gap-2 text-emerald-600">
-                            <FaLeaf />
+                        <div className="flex items-center gap-2">
+                            <FaLeaf className={dailyStatus.hasKelorToday ? 'text-gray-400' : 'text-emerald-500'} />
                             <h3 className="font-black text-gray-800 text-xs uppercase tracking-tighter">Kapsul Kelor</h3>
                         </div>
-                        <span className="text-lg font-black text-emerald-600">{pregnancy.pillKelorProgress || 0}/100</span>
+                        <span className={`text-lg font-black ${dailyStatus.hasKelorToday ? 'text-gray-400' : 'text-emerald-600'}`}>{pregnancy.pillKelorProgress || 0}/100</span>
                     </div>
-                    <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden mb-6">
-                        <div className="bg-emerald-500 h-full transition-all duration-700" style={{ width: `${Math.min(((pregnancy.pillKelorProgress || 0) / 100) * 100, 100)}%` }} />
+                    <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden mb-6">
+                        <div className={`${dailyStatus.hasKelorToday ? 'bg-gray-400' : 'bg-emerald-500'} h-full transition-all duration-700`} style={{ width: `${Math.min(((pregnancy.pillKelorProgress || 0) / 100) * 100, 100)}%` }} />
                     </div>
-                    <Button fullWidth className="h-16 bg-emerald-600 text-white font-black rounded-2xl active:scale-95 transition-transform" onClick={() => handleLogSupplement('kelor')} disabled={!!updatingType}>
-                        {updatingType === 'kelor' ? <FaSpinner className="animate-spin" /> : "SUDAH MINUM KELOR"}
+                    <Button
+                        fullWidth
+                        className={`h-16 font-black rounded-2xl transition-all ${dailyStatus.hasKelorToday ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-emerald-600 text-white active:scale-95'}`}
+                        onClick={() => handleLogSupplement('kelor')}
+                        disabled={!!updatingType || dailyStatus.hasKelorToday}
+                    >
+                        {updatingType === 'kelor' ? <FaSpinner className="animate-spin" /> : dailyStatus.hasKelorToday ? "SUDAH MINUM HARI INI" : "SUDAH MINUM KELOR"}
                     </Button>
                 </Card>
             </div>
