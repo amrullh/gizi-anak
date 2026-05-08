@@ -45,6 +45,7 @@ export default function AdminPregnancyPage() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [showComplaints, setShowComplaints] = useState(false);
   const [showPillDetail, setShowPillDetail] = useState<{ type: 'fe' | 'kelor' | null }>({ type: null });
+  const [searchPregnant, setSearchPregnant] = useState('');
 
   // Pengecekan Role Admin Pusat
   const isAdmin = currentUser?.role === 'admin';
@@ -99,6 +100,17 @@ export default function AdminPregnancyPage() {
       setForm(prev => ({ ...prev, umurKehamilanMinggu: weeks.toString() }));
     }
   }, [form.hpht]);
+  const [searchTerm, setSearchTerm] = useState(''); // State untuk Search
+
+  // --- LOGIKA FILTERING & SORTING (ALPHABET) ---
+  // Ganti logika filteredAndSortedList kamu jadi seperti ini:
+  const filteredAndSortedList = useMemo(() => {
+    return (pregnantList || [])
+      .filter(p =>
+        p.nama?.toLowerCase().includes(searchPregnant.toLowerCase())
+      )
+      .sort((a, b) => (a.nama || "").localeCompare(b.nama || ""));
+  }, [pregnantList, searchPregnant]);
 
   // Fetch only active pregnancies (not yet born)
   const fetchPregnantList = async () => {
@@ -615,6 +627,16 @@ export default function AdminPregnancyPage() {
           </div>
         </Card>
       )}
+      <div className="relative mb-4">
+        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
+        <input
+          type="text"
+          placeholder="Cari nama ibu di daftar monitoring..."
+          value={searchPregnant}
+          onChange={(e) => setSearchPregnant(e.target.value)}
+          className="w-full md:w-80 pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-pink-200 transition-all"
+        />
+      </div>
 
       {/* List of active pregnancies */}
       <Card className="overflow-hidden border border-gray-100 shadow-sm rounded-2xl bg-white">
@@ -630,36 +652,60 @@ export default function AdminPregnancyPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {pregnantList.map(p => (
-                <tr key={p.id} className="hover:bg-pink-50/30 transition-colors">
-                  <td className="p-4">
-                    <p className="font-semibold text-gray-800">{p.nama}</p>
-                    <div className="flex gap-2 mt-1">
-                      <span className="text-[9px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">Gravida: {p.kehamilanKe}</span>
-                      <span className="text-[9px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">Paritas: {p.jumlahAnakHidup}</span>
-                    </div>
-                  </td>
-                  {isAdmin && (
+              {/* REVISI: Menggunakan filteredAndSortedList yang sudah terhubung dengan Search Bar & Sorting */}
+              {filteredAndSortedList.length > 0 ? (
+                filteredAndSortedList.map((p) => (
+                  <tr key={p.id} className="hover:bg-pink-50/30 transition-colors">
                     <td className="p-4">
-                      <div className="flex items-center gap-1 text-blue-600 font-bold text-[11px]">
-                        <FaHospitalAlt className="text-[10px]" />
-                        {p.wilayah?.toUpperCase() || '-'}
+                      <p className="font-semibold text-gray-800">{p.nama}</p>
+                      <div className="flex gap-2 mt-1">
+                        <span className="text-[9px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">
+                          Gravida: {p.kehamilanKe}
+                        </span>
+                        <span className="text-[9px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">
+                          Paritas: {p.jumlahAnakHidup}
+                        </span>
                       </div>
                     </td>
-                  )}
-                  <td className="p-4 font-medium text-pink-600">
-                    {getGestationalAgeDisplay(p.hpht)}
-                  </td>
-                  <td className="p-4">
-                    <div className="font-semibold text-gray-800">{formatDateID(p.taksiranPersalinan)}</div>
-                  </td>
-                  <td className="p-4 text-center">
-                    <button onClick={() => { setMonitoringUser(p); setShowBirthForm(false); }} className="bg-white border border-pink-200 text-pink-600 px-4 py-1.5 rounded-full text-[10px] font-bold hover:bg-pink-500 hover:text-white transition-all uppercase tracking-wider">
-                      Pantau
-                    </button>
+                    {isAdmin && (
+                      <td className="p-4">
+                        <div className="flex items-center gap-1 text-blue-600 font-bold text-[11px]">
+                          <FaHospitalAlt className="text-[10px]" />
+                          {p.wilayah?.toUpperCase() || "-"}
+                        </div>
+                      </td>
+                    )}
+                    <td className="p-4 font-medium text-pink-600">
+                      {getGestationalAgeDisplay(p.hpht)}
+                    </td>
+                    <td className="p-4">
+                      <div className="font-semibold text-gray-800">
+                        {formatDateID(p.taksiranPersalinan)}
+                      </div>
+                    </td>
+                    <td className="p-4 text-center">
+                      <button
+                        onClick={() => {
+                          setMonitoringUser(p);
+                          setShowBirthForm(false);
+                        }}
+                        className="bg-white border border-pink-200 text-pink-600 px-4 py-1.5 rounded-full text-[10px] font-bold hover:bg-pink-500 hover:text-white transition-all uppercase tracking-wider"
+                      >
+                        Pantau
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                /* Tampilan jika hasil pencarian kosong */
+                <tr>
+                  <td colSpan={isAdmin ? 5 : 4} className="p-10 text-center text-gray-400 italic">
+                    {searchTerm
+                      ? `Nama "${searchTerm}" tidak ditemukan dalam daftar aktif.`
+                      : "Belum ada data ibu hamil."}
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
