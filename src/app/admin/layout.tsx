@@ -16,6 +16,7 @@ import {
     FaVenusMars,
     FaUsers,
     FaHeartbeat,
+    FaUserCog,
     FaMapMarkerAlt
 } from 'react-icons/fa'
 import { useAuth } from '@/context/AuthContext'
@@ -83,6 +84,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { href: '/admin/users', icon: FaUsers, label: 'Manajemen User' },
 
         ...(currentRole === 'admin' ? [
+            { href: '/admin/users/management', icon: FaUserCog, label: 'Manajemen Akun' }, // Khusus Hapus/Edit
             { href: '/admin/regions', icon: FaMapMarkerAlt, label: 'Kelola Wilayah' },
             { href: '/admin/reports', icon: FaChartBar, label: 'Laporan Global' },
         ] : []),
